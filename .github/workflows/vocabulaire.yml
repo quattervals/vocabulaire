@@ -1,0 +1,54 @@
+name: Vocabulaire CI
+
+on:
+  push:
+    branches:
+      - "**" # This will trigger the workflow on any branch
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup_rust
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Upload Linux binary
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vocabulaire_linux
+          path: target/release/vocabulaire
+
+      - name: Upload Windows binary
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vocabulaire_windows
+          path: target\release\vocabulaire.exe
+
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup_rust
+
+      - name: Run tests
+        run: cargo test
