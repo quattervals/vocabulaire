@@ -6,3 +6,4 @@ license = "MIT"
 authors = ["Herbert"]
 
 [dependencies]
+thiserror = "2.0"

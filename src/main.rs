@@ -1,4 +1,6 @@
 mod domain;
+mod tests;
+
 
 fn main() {
     println!("Hello, world!");
@@ -6,7 +8,7 @@ fn main() {
 
 
 #[cfg(test)]
-mod tests {
+mod unittests {
     #[test]
     fn test_hello_world() {
         assert!(true); // Placeholder test
