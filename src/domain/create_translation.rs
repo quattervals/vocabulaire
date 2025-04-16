@@ -6,6 +6,10 @@ use thiserror::Error;
 pub enum CreateError {
     #[error("Bad Input: {0}")]
     InvalidInput(#[from] TranslationRecordError),
+    #[error("Unknown")]
+    Unknown(String),
+
+    //error if this translation item already exists
 }
 
 //todo
@@ -13,9 +17,9 @@ pub enum CreateError {
 // maybe return ID from storing
 pub fn create_translation(
     word: &str,
-    word_lang: Lang,
+    word_lang: &Lang,
     translations: &Vec<&str>,
-    translation_lang: Lang,
+    translation_lang: &Lang,
 ) -> Result<TranslationRecord, CreateError> {
     Ok(TranslationRecord::new(
         word.to_string(),
@@ -35,14 +39,14 @@ mod tests {
 
     #[test]
     fn create_translation_ok_input_no_error() {
-        create_translation(WORD, WORD_LANG, &TRANSLATIONS.to_vec(), TRANSLATION_LANG)
+        create_translation(WORD, &WORD_LANG, &TRANSLATIONS.to_vec(), &TRANSLATION_LANG)
             .expect("Faulty creation");
     }
 
     #[test]
     fn create_translation_bad_input_error() {
         let create_trans =
-            create_translation("", WORD_LANG, &TRANSLATIONS.to_vec(), TRANSLATION_LANG);
+            create_translation("", &WORD_LANG, &TRANSLATIONS.to_vec(), &TRANSLATION_LANG);
 
         assert_eq!(create_trans.is_err(), true);
         assert_eq!(

@@ -1,5 +1,6 @@
 mod domain;
 mod tests;
+mod driving;
 
 
 fn main() {
