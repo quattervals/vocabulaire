@@ -1,0 +1,20 @@
+meta {
+  name: Create
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{api_url}}translations
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+      "word": "chien",
+      "lang": "fr",
+      "translations": ["köter", "hund"],
+      "translation_lang": "de"
+  }
+}
