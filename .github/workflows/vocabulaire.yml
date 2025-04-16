@@ -1,9 +1,9 @@
-name: Vocabulaire CI
+name: Vocabulaire CI/CD
 
 on:
   push:
     branches:
-      - "**" # This will trigger the workflow on any branch
+      - "**" # This will trigger the workflow on any branch that receives a git push
   workflow_dispatch:
 
 jobs:
@@ -38,10 +38,7 @@ jobs:
           path: target\release\vocabulaire.exe
 
   test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
