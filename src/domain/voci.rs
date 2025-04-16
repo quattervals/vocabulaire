@@ -1,8 +1,7 @@
-
+use thiserror::Error;
 
 // Todo:
 // - nicer "value()" for TranslationRecord
-
 
 /// Represents available languages in the system
 /// Languages codes according to https://de.wikipedia.org/wiki/Liste_der_ISO-639-2-Codes
@@ -13,24 +12,28 @@ pub enum Lang {
     de, // german
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Error)]
 pub enum TranslationRecordError {
-    EmptyWord(),
-    EmptyTranslation(),
-    EmptyWordInTranslation(),
+    #[error("Word is Empty")]
+    EmptyWord,
+    #[error("No Translation")]
+    EmptyTranslation,
+    #[error("One of the Words in Translations is empty")]
+    EmptyWordInTranslation,
+    #[error("Unknown Error: {0}")]
     Unknown(String),
 }
 
 #[derive(Debug, PartialEq)]
-struct Word {
+pub struct Word {
     word: String,
     lang: Lang,
 }
 
 impl Word {
-    fn new(word: String, lang: Lang) -> Result<Self, TranslationRecordError> {
+    pub fn new(word: String, lang: Lang) -> Result<Self, TranslationRecordError> {
         if word.is_empty() {
-            return Err(TranslationRecordError::EmptyWord());
+            return Err(TranslationRecordError::EmptyWord);
         }
         Ok(Word { word, lang })
     }
@@ -48,11 +51,11 @@ struct Translations {
 impl Translations {
     fn new(words: Vec<String>, lang: Lang) -> Result<Self, TranslationRecordError> {
         if words.is_empty() {
-            return Err(TranslationRecordError::EmptyTranslation());
+            return Err(TranslationRecordError::EmptyTranslation);
         }
 
         if words.iter().any(|s| s.is_empty()) {
-            return Err(TranslationRecordError::EmptyWordInTranslation());
+            return Err(TranslationRecordError::EmptyWordInTranslation);
         }
 
         Ok(Translations { words, lang })
@@ -100,7 +103,7 @@ mod tests {
     fn word_new_bad_input_error() {
         let err_word = Word::new("".to_string(), Lang::fr);
         assert_eq!(err_word.is_err(), true);
-        assert_eq!(err_word.unwrap_err(), TranslationRecordError::EmptyWord());
+        assert_eq!(err_word.unwrap_err(), TranslationRecordError::EmptyWord);
     }
 
     #[test]
@@ -121,7 +124,7 @@ mod tests {
         assert_eq!(err_translations.is_err(), true);
         assert_eq!(
             err_translations.unwrap_err(),
-            TranslationRecordError::EmptyWordInTranslation()
+            TranslationRecordError::EmptyWordInTranslation
         );
     }
 
@@ -133,7 +136,7 @@ mod tests {
         assert_eq!(err_translations.is_err(), true);
         assert_eq!(
             err_translations.unwrap_err(),
-            TranslationRecordError::EmptyTranslation()
+            TranslationRecordError::EmptyTranslation
         );
     }
 
@@ -169,7 +172,7 @@ mod tests {
         assert_eq!(chien.is_err(), true);
         assert_eq!(
             chien.unwrap_err(),
-            TranslationRecordError::EmptyWordInTranslation()
+            TranslationRecordError::EmptyWordInTranslation
         );
     }
 }
