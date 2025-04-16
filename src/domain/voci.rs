@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 // Todo:
@@ -6,7 +7,7 @@ use thiserror::Error;
 /// Represents available languages in the system
 /// Languages codes according to https://de.wikipedia.org/wiki/Liste_der_ISO-639-2-Codes
 #[allow(non_camel_case_types)]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Lang {
     fr, // french
     de, // german
@@ -64,6 +65,9 @@ impl Translations {
     fn translations(&self) -> &Vec<String> {
         &self.words
     }
+    fn value(&self) -> (&Vec<String>, &Lang) {
+        (&self.translations(), &self.lang)
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -86,6 +90,12 @@ impl TranslationRecord {
             word: word,
             translations: translations,
         })
+    }
+
+    pub fn flat(&self) -> (&String, &Lang, &Vec<String>, &Lang) {
+        let word = &self.word.value();
+        let trans = &self.translations.value();
+        (word.0, word.1, trans.0, trans.1)
     }
 }
 
