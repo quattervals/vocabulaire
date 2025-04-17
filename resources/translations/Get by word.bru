@@ -1,0 +1,18 @@
+meta {
+  name: Get by word
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{api_url}}translations
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "word": "chien",
+    "lang": "fr"
+  }
+}
