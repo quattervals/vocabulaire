@@ -5,6 +5,7 @@ use validator::Validate;
 
 use crate::domain;
 use crate::domain::create_translation::CreateError;
+use crate::domain::read_translation::ReadError;
 use crate::domain::voci::{Lang, TranslationRecord};
 
 use crate::driving::rest_handler::errors::ApiError;
@@ -58,13 +59,12 @@ pub async fn create_translation(
 ) -> Result<Json<TranslationResponse>, ApiError> {
     validate(&request)?;
 
-    let result: Result<TranslationRecord, CreateError> =
-        domain::create_translation::create_translation(
-            &request.word,
-            &request.lang,
-            &request.translations.iter().map(|s| s.as_str()).collect(), //todo split this to helper function
-            &request.translation_lang,
-        );
+    let result = domain::create_translation::create_translation(
+        &request.word,
+        &request.lang,
+        &request.translations.iter().map(|s| s.as_str()).collect(), //todo split this to helper function
+        &request.translation_lang,
+    );
 
     result
         .map(|v| respond_json(TranslationResponse::from(v)))
@@ -75,14 +75,14 @@ pub async fn create_translation(
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Validate)]
-pub struct DeleteTranslationRequest {
+pub struct RequestTranslationByWord {
     #[validate(length(min = 1, message = "name is required and must be at least 1 character"))]
     pub word: String,
     pub lang: Lang,
 }
 
 pub async fn delete_translation(
-    request: Json<DeleteTranslationRequest>,
+    request: Json<RequestTranslationByWord>,
 ) -> Result<HttpResponse, ApiError> {
     validate(&request)?;
 
@@ -90,6 +90,21 @@ pub async fn delete_translation(
         Ok(_) => Ok(HttpResponse::Ok().finish()),
         Err(e) => Err(ApiError::InvalidData(e.to_string())),
     }
+}
+
+pub async fn read_translation(
+    request: Json<RequestTranslationByWord>,
+) -> Result<Json<TranslationResponse>, ApiError> {
+    validate(&request)?;
+
+    let result: Result<TranslationRecord, ReadError> =
+        domain::read_translation::read_translation(&request.word, &request.lang);
+
+    result
+        .map(|v| respond_json(TranslationResponse::from(v)))
+        .map_err(|e| match e {
+            ReadError::WordError(e) => ApiError::InvalidData(e.to_string()),
+        })?
 }
 
 #[cfg(test)]
@@ -132,7 +147,7 @@ mod tests {
 
     #[actix_web::test]
     async fn delete_translation_ok_input_http_success() {
-        let del_req = DeleteTranslationRequest {
+        let del_req = RequestTranslationByWord {
             word: WORD.to_string(),
             lang: WORD_LANG,
         };
@@ -152,7 +167,7 @@ mod tests {
 
     #[actix_web::test]
     async fn delete_translation_bad_input_http_client_error() {
-        let del_req = DeleteTranslationRequest {
+        let del_req = RequestTranslationByWord {
             word: "".to_string(),
             lang: WORD_LANG,
         };
@@ -168,6 +183,34 @@ mod tests {
         .await;
 
         assert_eq!(r.status().is_client_error(), true);
+    }
+
+    #[actix_web::test]
+    async fn read_translation_good_input_http_translation_returned() {
+        let read_req = RequestTranslationByWord {
+            word: "chien".to_string(),
+            lang: WORD_LANG,
+        };
+
+        let resp: TranslationResponse = execute(
+            "/",
+            None,
+            web::get(),
+            TestRequest::get(),
+            read_translation,
+            Some(read_req),
+        )
+        .await;
+
+        let expected = TranslationRecord::new(
+            WORD.to_string(),
+            WORD_LANG,
+            stub_translations(),
+            TRANSLATION_LANG,
+        )
+        .unwrap();
+
+        assert_on_translation_response(&resp, &expected);
     }
 
     /// Execute a test request and return HttpResponse
