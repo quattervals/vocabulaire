@@ -6,6 +6,7 @@ use validator::Validate;
 use crate::domain;
 use crate::domain::create_translation::CreateError;
 use crate::domain::read_translation::ReadError;
+use crate::domain::update_translation::UpdateError;
 use crate::domain::voci::{Lang, TranslationRecord};
 
 use crate::driving::rest_handler::errors::ApiError;
@@ -104,6 +105,25 @@ pub async fn read_translation(
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
             ReadError::WordError(e) => ApiError::InvalidData(e.to_string()),
+        })?
+}
+
+pub async fn update_translation(
+    request: Json<CreateTranslationRequest>,
+) -> Result<Json<TranslationResponse>, ApiError> {
+    validate(&request)?;
+
+    let result = domain::update_translation::update_translation(
+        &request.word,
+        &request.lang,
+        &request.translations.iter().map(|s| s.as_str()).collect(), //todo split this to helper function
+        &request.translation_lang,
+    );
+
+    result
+        .map(|v| respond_json(TranslationResponse::from(v)))
+        .map_err(|e| match e {
+            UpdateError::WordError(m) => ApiError::InvalidData(m.to_string()),
         })?
 }
 
@@ -206,6 +226,39 @@ mod tests {
             WORD.to_string(),
             WORD_LANG,
             stub_translations(),
+            TRANSLATION_LANG,
+        )
+        .unwrap();
+
+        assert_on_translation_response(&resp, &expected);
+    }
+
+    #[actix_web::test]
+    async fn update_translation_good_input_extended_translation_returned() {
+        let update_req = CreateTranslationRequest {
+            word: WORD.to_string(),
+            lang: WORD_LANG,
+            translations: stub_translations(),
+            translation_lang: TRANSLATION_LANG,
+        };
+
+        let resp: TranslationResponse = execute(
+            "/",
+            None,
+            web::put(),
+            TestRequest::put(),
+            update_translation,
+            Some(update_req),
+        )
+        .await;
+
+        let mut updated_translations = vec!["köter".to_string(), "waldi".to_string()];
+        updated_translations.append(&mut stub_translations());
+
+        let expected = TranslationRecord::new(
+            WORD.to_string(),
+            WORD_LANG,
+            updated_translations,
             TRANSLATION_LANG,
         )
         .unwrap();

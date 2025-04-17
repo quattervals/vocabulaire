@@ -32,11 +32,11 @@ pub enum UpdateError {
 ///
 pub fn update_translation(
     word: &str,
-    word_lang: Lang,
+    lang: &Lang,
     extra_translations: &Vec<&str>,
-    extra_translation_lang: Lang,
+    extra_translation_lang: &Lang,
 ) -> Result<TranslationRecord, UpdateError> {
-    let _word = Word::new(word.to_string(), word_lang)?;
+    let word = Word::new(word.to_string(), lang.clone())?;
     //todo: word is needed to find the record
 
     let mut translations = vec!["köter".to_string(), "waldi".to_string()];
@@ -44,12 +44,13 @@ pub fn update_translation(
         extra_translations.iter().map(|s| s.to_string()).collect();
     translations.append(&mut extra_translations);
 
+    let (word, lang) = word.value();
 
     Ok(TranslationRecord::new(
-        "chien".to_string(),
-        Lang::fr,
+        word.to_string(),
+        lang.clone(),
         translations,
-        Lang::de,
+        extra_translation_lang.clone(),
     )?)
 }
 
@@ -60,12 +61,18 @@ mod tests {
 
     #[test]
     fn update_ok_word_ok() {
-        matches!(update_translation(WORD, WORD_LANG, &TRANSLATIONS.to_vec(), TRANSLATION_LANG), Ok(_));
+        matches!(
+            update_translation(WORD, &WORD_LANG, &TRANSLATIONS.to_vec(), &TRANSLATION_LANG),
+            Ok(_)
+        );
     }
     #[test]
     fn update_bad_word_err() {
-        let upd_trans = update_translation("", WORD_LANG, &TRANSLATIONS.to_vec(), TRANSLATION_LANG);
+        let upd_trans = update_translation("", &WORD_LANG, &TRANSLATIONS.to_vec(), &TRANSLATION_LANG);
         assert_eq!(upd_trans.is_err(), true);
-        assert_eq!(upd_trans.unwrap_err(), UpdateError::WordError(TranslationRecordError::EmptyWord))
+        assert_eq!(
+            upd_trans.unwrap_err(),
+            UpdateError::WordError(TranslationRecordError::EmptyWord)
+        )
     }
 }

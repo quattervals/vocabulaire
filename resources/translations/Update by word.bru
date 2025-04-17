@@ -1,0 +1,23 @@
+meta {
+  name: Update by word
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{api_url}}translations
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "word": "chien",
+    "lang": "fr",
+    "translations": [
+      "schnufi",
+      "fido"
+    ],
+    "translation_lang": "de"
+  }
+}
