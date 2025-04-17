@@ -1,0 +1,8 @@
+[persistence]
+    host = "localhost"
+    port = 27017
+    user = "root"
+    password = "tran5lation5"
+    database = "translations"
+    schema_collection = "translation"
+    auth_db = "admin"

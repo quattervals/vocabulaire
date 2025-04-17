@@ -6,7 +6,9 @@ use crate::driving::rest_handler;
 
 mod domain;
 mod driving;
+mod driven;
 mod tests;
+mod config;
 
 #[actix_web::main]
 async fn main() {
