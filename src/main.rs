@@ -44,6 +44,7 @@ fn routes(cfg: &mut web::ServiceConfig) {
                             web::resource("translations")
                                 // .route(web::get().to(rest_handler::sandwiches::find_sandwiches))
                                 .route(web::post().to(rest_handler::vocis::create_translation))
+                                .route(web::delete().to(rest_handler::vocis::delete_translation))
                                 // .route(web::put().to(rest_handler::sandwiches::update_sandwich))
                         ).service(
                         web::resource("translations/{id}")

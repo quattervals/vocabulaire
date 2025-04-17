@@ -58,12 +58,13 @@ pub async fn create_translation(
 ) -> Result<Json<TranslationResponse>, ApiError> {
     validate(&request)?;
 
-    let result = domain::create_translation::create_translation(
-        &request.word,
-        &request.lang,
-        &request.translations.iter().map(|s| s.as_str()).collect(), //todo split this to helper function
-        &request.translation_lang,
-    );
+    let result: Result<TranslationRecord, CreateError> =
+        domain::create_translation::create_translation(
+            &request.word,
+            &request.lang,
+            &request.translations.iter().map(|s| s.as_str()).collect(), //todo split this to helper function
+            &request.translation_lang,
+        );
 
     result
         .map(|v| respond_json(TranslationResponse::from(v)))
@@ -71,6 +72,24 @@ pub async fn create_translation(
             CreateError::Unknown(m) => ApiError::Unknown(m),
             CreateError::InvalidInput(m) => ApiError::InvalidData(m.to_string()),
         })?
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Validate)]
+pub struct DeleteTranslationRequest {
+    #[validate(length(min = 1, message = "name is required and must be at least 1 character"))]
+    pub word: String,
+    pub lang: Lang,
+}
+
+pub async fn delete_translation(
+    request: Json<DeleteTranslationRequest>,
+) -> Result<HttpResponse, ApiError> {
+    validate(&request)?;
+
+    match domain::delete_translation::delete_translation(&request.word, &request.lang) {
+        Ok(_) => Ok(HttpResponse::Ok().finish()),
+        Err(e) => Err(ApiError::InvalidData(e.to_string())),
+    }
 }
 
 #[cfg(test)]
@@ -105,9 +124,86 @@ mod tests {
             WORD_LANG,
             stub_translations(),
             TRANSLATION_LANG,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_on_translation_response(&resp, &expected);
+    }
+
+    #[actix_web::test]
+    async fn delete_translation_ok_input_http_success() {
+        let del_req = DeleteTranslationRequest {
+            word: WORD.to_string(),
+            lang: WORD_LANG,
+        };
+
+        let r = execute_http(
+            "/",
+            None,
+            web::delete(),
+            TestRequest::delete(),
+            delete_translation,
+            Some(del_req),
+        )
+        .await;
+
+        assert_eq!(r.status().is_success(), true);
+    }
+
+    #[actix_web::test]
+    async fn delete_translation_bad_input_http_client_error() {
+        let del_req = DeleteTranslationRequest {
+            word: "".to_string(),
+            lang: WORD_LANG,
+        };
+
+        let r = execute_http(
+            "/",
+            None,
+            web::delete(),
+            TestRequest::delete(),
+            delete_translation,
+            Some(del_req),
+        )
+        .await;
+
+        assert_eq!(r.status().is_client_error(), true);
+    }
+
+    /// Execute a test request and return HttpResponse
+    async fn execute_http<F, Args>(
+        path: &str,
+        uri_to_call: Option<&str>,
+        http_method: Route,
+        test_req: TestRequest,
+        handler: F,
+        recipe_req: Option<impl Serialize>,
+    ) -> HttpResponse
+    where
+        F: Handler<Args>,
+        Args: FromRequest + 'static,
+        F::Output: Responder,
+    {
+        // init the service
+        let app = test::init_service(App::new().route(path, http_method.to(handler))).await;
+
+        // Set URI
+        let req = match uri_to_call {
+            Some(uri) => test_req.uri(uri),
+            None => test_req,
+        };
+
+        // Set the JSON body if provided
+        let req = match recipe_req {
+            Some(ref r) => req.set_json(recipe_req.unwrap()),
+            None => req,
+        };
+
+        // Call the service and get the response
+        let response = test::call_service(&app, req.to_request()).await;
+
+        // Extract the HttpResponse from the ServiceResponse
+        response.into_parts().1
     }
 
     /// execute a test request

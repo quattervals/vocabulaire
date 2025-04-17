@@ -1,4 +1,4 @@
-use crate::domain::voci::{Lang, TranslationRecord, TranslationRecordError, Word};
+use crate::domain::voci::{Lang, TranslationRecordError, Word};
 
 use thiserror::Error;
 
@@ -13,8 +13,8 @@ pub enum DeleteError {
 //todo
 // add side effect of deleting this Translation record
 // add deletion via ID
-pub fn delete_translation(word: &str, lang: Lang) -> Result<(), DeleteError> {
-    let _word = Word::new(word.to_string(), lang)?;
+pub fn delete_translation(word: &str, lang: &Lang) -> Result<(), DeleteError> {
+    let _word = Word::new(word.to_string(), lang.clone())?;
     Ok(())
 }
 
@@ -25,11 +25,11 @@ mod tests {
 
     #[test]
     fn delete_ok_word_ok() {
-        assert_eq!(delete_translation(WORD, WORD_LANG), Ok(()));
+        assert_eq!(delete_translation(WORD, &WORD_LANG), Ok(()));
     }
     #[test]
     fn delete_bad_word_err() {
-        let del_trans = delete_translation("", WORD_LANG);
+        let del_trans = delete_translation("", &WORD_LANG);
         assert_eq!(del_trans.is_err(), true);
         assert_eq!(
             del_trans.unwrap_err(),
