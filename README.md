@@ -10,3 +10,10 @@
 Improve vocabulary of a foreign language by practicing to and from translations
 
 Showcase for hexagonal architecture
+
+
+
+## How To
+
+Start the docker container with the DB
+`docker compose -f docker/docker-compose.yml up -d --build`
