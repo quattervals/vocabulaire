@@ -3,11 +3,11 @@ use actix_web::{HttpResponse, web};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::domain;
 use crate::domain::create_translation::CreateError;
 use crate::domain::read_translation::ReadError;
 use crate::domain::update_translation::UpdateError;
 use crate::domain::voci::{Lang, TranslationRecord};
+use crate::{Repository, domain};
 
 use crate::driving::rest_handler::errors::ApiError;
 use crate::driving::rest_handler::validate::validate;
@@ -55,22 +55,26 @@ pub struct CreateTranslationRequest {
     pub translation_lang: Lang,
 }
 
-pub async fn create_translation(
+pub async fn create_translation<T: Repository<TranslationRecord>>(
+    repository: web::Data<T>,
     request: Json<CreateTranslationRequest>,
 ) -> Result<Json<TranslationResponse>, ApiError> {
     validate(&request)?;
 
     let result = domain::create_translation::create_translation(
+        repository,
         &request.word,
         &request.lang,
         &request.translations.iter().map(|s| s.as_str()).collect(), //todo split this to helper function
         &request.translation_lang,
-    );
+    )
+    .await;
 
     result
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
-            CreateError::Unknown(m) => ApiError::Unknown(m),
+            CreateError::Unknown(s) => ApiError::Unknown(s),
+            CreateError::InvalidData(s) => ApiError::InvalidData(s.to_string()),
             CreateError::InvalidInput(m) => ApiError::InvalidData(m.to_string()),
         })?
 }
@@ -130,13 +134,16 @@ pub async fn update_translation(
 #[cfg(test)]
 mod tests {
     use actix_web::test::TestRequest;
-    use actix_web::{App, FromRequest, Handler, Responder, Route, test};
+    use actix_web::{App, FromRequest, Handler, Responder, Route, test, web::Data};
 
     use super::*;
+    use crate::driven::repository::mongo_repository::VociMongoRepository;
     use crate::tests::test_utils::shared::*;
 
     #[actix_web::test]
     async fn create_translation_ok_input_same_translation_returned() {
+        let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
+
         let create_req = CreateTranslationRequest {
             word: WORD.to_string(),
             lang: WORD_LANG,
@@ -145,11 +152,12 @@ mod tests {
         };
 
         let resp: TranslationResponse = execute(
+            &repo,
             "/",
             None,
             web::post(),
             TestRequest::post(),
-            create_translation,
+            create_translation::<VociMongoRepository>,
             Some(create_req),
         )
         .await;
@@ -167,12 +175,15 @@ mod tests {
 
     #[actix_web::test]
     async fn delete_translation_ok_input_http_success() {
+
+        let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
         let del_req = RequestTranslationByWord {
             word: WORD.to_string(),
             lang: WORD_LANG,
         };
 
         let r = execute_http(
+            &repo,
             "/",
             None,
             web::delete(),
@@ -187,12 +198,15 @@ mod tests {
 
     #[actix_web::test]
     async fn delete_translation_bad_input_http_client_error() {
+
+        let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
         let del_req = RequestTranslationByWord {
             word: "".to_string(),
             lang: WORD_LANG,
         };
 
         let r = execute_http(
+            &repo,
             "/",
             None,
             web::delete(),
@@ -207,12 +221,15 @@ mod tests {
 
     #[actix_web::test]
     async fn read_translation_good_input_http_translation_returned() {
+
+        let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
         let read_req = RequestTranslationByWord {
             word: "chien".to_string(),
             lang: WORD_LANG,
         };
 
         let resp: TranslationResponse = execute(
+            &repo,
             "/",
             None,
             web::get(),
@@ -235,6 +252,8 @@ mod tests {
 
     #[actix_web::test]
     async fn update_translation_good_input_extended_translation_returned() {
+
+        let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
         let update_req = CreateTranslationRequest {
             word: WORD.to_string(),
             lang: WORD_LANG,
@@ -243,6 +262,7 @@ mod tests {
         };
 
         let resp: TranslationResponse = execute(
+            &repo,
             "/",
             None,
             web::put(),
@@ -267,7 +287,8 @@ mod tests {
     }
 
     /// Execute a test request and return HttpResponse
-    async fn execute_http<F, Args>(
+    async fn execute_http<F, Args, R>(
+        repo: &R,
         path: &str,
         uri_to_call: Option<&str>,
         http_method: Route,
@@ -276,12 +297,14 @@ mod tests {
         recipe_req: Option<impl Serialize>,
     ) -> HttpResponse
     where
+        R: Repository<TranslationRecord> + Send + Sync + 'static + Clone,
         F: Handler<Args>,
         Args: FromRequest + 'static,
         F::Output: Responder,
     {
         // init the service
-        let app = test::init_service(App::new().route(path, http_method.to(handler))).await;
+        let app = test::init_service(App::new().app_data(Data::new(repo.clone())).route(path, http_method.to(handler))).await;
+
 
         // Set URI
         let req = match uri_to_call {
@@ -303,7 +326,8 @@ mod tests {
     }
 
     /// execute a test request
-    async fn execute<F, Args, Ret>(
+    async fn execute<F, Args, R, Ret>(
+        repo: &R,
         path: &str,
         uri_to_call: Option<&str>,
         http_method: Route,
@@ -312,13 +336,14 @@ mod tests {
         recipe_req: Option<impl Serialize>,
     ) -> Ret
     where
+        R: Repository<TranslationRecord> + Send + Sync + 'static + Clone,
         F: Handler<Args>,
         Args: FromRequest + 'static,
         F::Output: Responder,
         Ret: for<'de> Deserialize<'de>,
     {
         // init service
-        let app = test::init_service(App::new().route(path, http_method.to(handler))).await;
+        let app = test::init_service(App::new().app_data(Data::new(repo.clone())).route(path, http_method.to(handler))).await;
 
         // set uri
         let req = match uri_to_call {
