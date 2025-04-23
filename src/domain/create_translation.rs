@@ -28,12 +28,12 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
 ) -> Result<TranslationRecord, CreateError> {
     let tr = TranslationRecord::new(
         word.to_string(),
-        Lang::fr,
+        word_lang.clone(),
         translations
             .iter()
             .map(|t| t.to_string())
             .collect::<Vec<String>>(),
-        Lang::de,
+        translation_lang.clone(),
     )
     .map_err(|e| CreateError::InvalidInput(e))?;
 
@@ -58,7 +58,6 @@ mod tests {
     async fn create_translation_ok_input_no_error() {
         let repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
 
-
         let result = create_translation(
             Data::new(repo),
             WORD,
@@ -69,12 +68,11 @@ mod tests {
         .await
         .unwrap();
 
-
         assert_eq!(true, true);
 
         // assert_eq!(result.id().value().is_some(), true); //todo check if ID exists
 
-         assert_eq!(result, stub_translation_record());
+        assert_eq!(result, stub_translation_record());
     }
     //     create_translation(WORD, &WORD_LANG, &TRANSLATIONS.to_vec(), &TRANSLATION_LANG)
     //         .expect("Faulty creation");
