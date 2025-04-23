@@ -27,6 +27,7 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
     translation_lang: &Lang,
 ) -> Result<TranslationRecord, CreateError> {
     let tr = TranslationRecord::new(
+        None,
         word.to_string(),
         word_lang.clone(),
         translations
@@ -68,11 +69,10 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(true, true);
 
         // assert_eq!(result.id().value().is_some(), true); //todo check if ID exists
 
-        assert_eq!(result, stub_translation_record());
+        assert_eq!(result, stub_translation_record(true));
     }
     //     create_translation(WORD, &WORD_LANG, &TRANSLATIONS.to_vec(), &TRANSLATION_LANG)
     //         .expect("Faulty creation");

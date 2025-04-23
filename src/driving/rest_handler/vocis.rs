@@ -6,7 +6,7 @@ use validator::Validate;
 use crate::domain::create_translation::CreateError;
 use crate::domain::read_translation::ReadError;
 use crate::domain::update_translation::UpdateError;
-use crate::domain::voci::{Lang, TranslationRecord};
+use crate::domain::voci::{Lang, TranslationId, TranslationRecord};
 use crate::{Repository, domain};
 
 use crate::driving::rest_handler::errors::ApiError;
@@ -22,6 +22,7 @@ where
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct TranslationResponse {
+    pub id: Option<String>, //todo: let's see if option string can be serialized
     pub word: String,
     pub lang: Lang,
     pub translations: Vec<String>,
@@ -29,8 +30,9 @@ pub struct TranslationResponse {
 }
 impl From<TranslationRecord> for TranslationResponse {
     fn from(s: TranslationRecord) -> Self {
-        let (word, lang, translations, translation_lang) = s.flat();
+        let (id, word, lang, translations, translation_lang) = s.flat();
         TranslationResponse {
+            id: id.clone(),
             word: word.clone(),
             lang: lang.clone(),
             translations: translations.clone(),
@@ -41,17 +43,15 @@ impl From<TranslationRecord> for TranslationResponse {
 
 #[derive(Clone, Debug, Deserialize, Serialize, Validate)]
 pub struct CreateTranslationRequest {
+    pub id: Option<String>,
     #[validate(length(min = 1, message = "name is required and must be at least 1 character"))]
     pub word: String,
-
     pub lang: Lang,
-
     #[validate(length(
         min = 1,
         message = "ingredients is required and must be at least 1 item"
     ))]
     pub translations: Vec<String>,
-
     pub translation_lang: Lang,
 }
 
@@ -145,6 +145,7 @@ mod tests {
         let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
 
         let create_req = CreateTranslationRequest {
+            id: None,
             word: WORD.to_string(),
             lang: WORD_LANG,
             translations: stub_translations(),
@@ -163,6 +164,7 @@ mod tests {
         .await;
 
         let expected = TranslationRecord::new(
+            Some(TRANSLATION_ID.to_string()),
             WORD.to_string(),
             WORD_LANG,
             stub_translations(),
@@ -170,12 +172,11 @@ mod tests {
         )
         .unwrap();
 
-        assert_on_translation_response(&resp, &expected);
+        assert_on_translation_response(&resp, &expected, false);
     }
 
     #[actix_web::test]
     async fn delete_translation_ok_input_http_success() {
-
         let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
         let del_req = RequestTranslationByWord {
             word: WORD.to_string(),
@@ -198,7 +199,6 @@ mod tests {
 
     #[actix_web::test]
     async fn delete_translation_bad_input_http_client_error() {
-
         let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
         let del_req = RequestTranslationByWord {
             word: "".to_string(),
@@ -219,9 +219,10 @@ mod tests {
         assert_eq!(r.status().is_client_error(), true);
     }
 
-    #[actix_web::test]
-    async fn read_translation_good_input_http_translation_returned() {
+    //todo: read translation by ID
 
+    #[actix_web::test]
+    async fn read_translation_by_word_good_input_http_translation_returned() {
         let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
         let read_req = RequestTranslationByWord {
             word: "chien".to_string(),
@@ -240,6 +241,7 @@ mod tests {
         .await;
 
         let expected = TranslationRecord::new(
+            Some(TRANSLATION_ID.to_string()),
             WORD.to_string(),
             WORD_LANG,
             stub_translations(),
@@ -247,14 +249,14 @@ mod tests {
         )
         .unwrap();
 
-        assert_on_translation_response(&resp, &expected);
+        assert_on_translation_response(&resp, &expected, false);
     }
 
     #[actix_web::test]
     async fn update_translation_good_input_extended_translation_returned() {
-
         let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
         let update_req = CreateTranslationRequest {
+            id: Some(TRANSLATION_ID.to_string()),
             word: WORD.to_string(),
             lang: WORD_LANG,
             translations: stub_translations(),
@@ -276,6 +278,7 @@ mod tests {
         updated_translations.append(&mut stub_translations());
 
         let expected = TranslationRecord::new(
+            Some(TRANSLATION_ID.to_string()),
             WORD.to_string(),
             WORD_LANG,
             updated_translations,
@@ -283,7 +286,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_on_translation_response(&resp, &expected);
+        assert_on_translation_response(&resp, &expected, false);
     }
 
     /// Execute a test request and return HttpResponse
@@ -303,8 +306,12 @@ mod tests {
         F::Output: Responder,
     {
         // init the service
-        let app = test::init_service(App::new().app_data(Data::new(repo.clone())).route(path, http_method.to(handler))).await;
-
+        let app = test::init_service(
+            App::new()
+                .app_data(Data::new(repo.clone()))
+                .route(path, http_method.to(handler)),
+        )
+        .await;
 
         // Set URI
         let req = match uri_to_call {
@@ -343,7 +350,12 @@ mod tests {
         Ret: for<'de> Deserialize<'de>,
     {
         // init service
-        let app = test::init_service(App::new().app_data(Data::new(repo.clone())).route(path, http_method.to(handler))).await;
+        let app = test::init_service(
+            App::new()
+                .app_data(Data::new(repo.clone()))
+                .route(path, http_method.to(handler)),
+        )
+        .await;
 
         // set uri
         let req = match uri_to_call {
@@ -360,8 +372,16 @@ mod tests {
         test::call_and_read_body_json(&app, req.to_request()).await
     }
 
-    fn assert_on_translation_response(actual: &TranslationResponse, expected: &TranslationRecord) {
-        let (word, lang, translations, translation_lang) = expected.flat();
+    fn assert_on_translation_response(
+        actual: &TranslationResponse,
+        expected: &TranslationRecord,
+        check_id: bool,
+    ) {
+        let (id, word, lang, translations, translation_lang) = expected.flat();
+
+        if check_id {
+            assert_eq!(&actual.id, id);
+        }
         assert_eq!(&actual.word, word);
         assert_eq!(&actual.lang, lang);
         assert_on_translations(&actual.translations, &translations);

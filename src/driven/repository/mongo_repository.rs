@@ -25,10 +25,12 @@ pub struct VociMongo {
 
 impl From<TranslationRecord> for VociMongo {
     fn from(tr: TranslationRecord) -> Self {
-        let object_id = ObjectId::new();
-        // todo: look-up existing object ID
+        let object_id = match tr.id().value() {
+            Some(id) => ObjectId::parse_str(id).unwrap(),
+            None => ObjectId::new(),
+        };
 
-        let (word, lang, translations, translation_lang) = tr.flat();
+        let (_, word, lang, translations, translation_lang) = tr.flat();
 
         VociMongo {
             _id: object_id,
@@ -44,6 +46,7 @@ impl TryInto<TranslationRecord> for VociMongo {
     type Error = TranslationRecordError;
     fn try_into(self) -> Result<TranslationRecord, Self::Error> {
         TranslationRecord::new(
+            Some(self._id.to_string()),
             self.word,
             self.lang,
             self.translations,
@@ -100,15 +103,15 @@ impl Repository<TranslationRecord> for VociMongoRepository {
 
         let result = translation_collection.insert_one(voci_mongo).await;
 
-        let _inserted_id = match result {
+        let inserted_id = match result {
             Ok(id) => id.inserted_id.as_object_id().unwrap(),
             Err(e) => return Err(RepoCreateError::Unknown(e.to_string())),
         };
 
-        let (word, lang, translations, translation_lang) = tr.flat();
+        let (_, word, lang, translations, translation_lang) = tr.flat();
 
         let created_tr = TranslationRecord::new(
-            //todo: id.to_string()
+            Some(inserted_id.to_string()),
             word.clone(),
             lang.clone(),
             translations.clone(),
@@ -171,9 +174,14 @@ mod tests {
         let repo: VociMongoRepository =
             Repository::<TranslationRecord>::new(&get_testing_persistence_config()).unwrap();
 
-        let result = repo.create(stub_translation_record()).await;
-        let expected = stub_translation_record();
+        let result = repo.create(stub_translation_record(false)).await.unwrap();
+        let result = result.flat();
+        let expected = stub_translation_record(true);
+        let expected = expected.flat();
 
-        assert_eq!(result.unwrap(), expected);
+        assert_eq!(result.1, expected.1);
+        assert_eq!(result.2, expected.2);
+        assert_eq!(result.3, expected.3);
+        assert_eq!(result.4, expected.4);
     }
 }

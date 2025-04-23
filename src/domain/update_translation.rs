@@ -47,6 +47,7 @@ pub fn update_translation(
     let (word, lang) = word.value();
 
     Ok(TranslationRecord::new(
+        None,
         word.to_string(),
         lang.clone(),
         translations,

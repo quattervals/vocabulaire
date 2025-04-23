@@ -1,10 +1,8 @@
+use actix_web::body::None;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::domain::Entity;
-
-// Todo:
-// - nicer "value()" for TranslationRecord
 
 /// Represents available languages in the system
 /// Languages codes according to https://de.wikipedia.org/wiki/Liste_der_ISO-639-2-Codes
@@ -25,6 +23,39 @@ pub enum TranslationRecordError {
     EmptyWordInTranslation,
     #[error("Unknown Error: {0}")]
     Unknown(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TranslationId(Option<String>);
+
+impl TranslationId {
+    pub fn value(&self) -> &Option<String> {
+        &self.0
+    }
+}
+
+impl From<String> for TranslationId {
+    fn from(id: String) -> Self {
+        if id.is_empty() {
+            Self(None)
+        } else {
+            Self(Some(id))
+        }
+    }
+}
+impl From<Option<String>> for TranslationId {
+    fn from(opt: Option<String>) -> Self {
+        match opt {
+            Some(val) => {
+                if val.is_empty() {
+                    Self(None)
+                } else {
+                    Self(Some(val.to_string()))
+                }
+            }
+            None => Self(None),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -74,30 +105,39 @@ impl Translations {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TranslationRecord {
+    id: TranslationId,
     word: Word,
     translations: Translations,
 }
 
 impl TranslationRecord {
     pub fn new(
+        id: Option<String>,
         word: String,
         word_lang: Lang,
         translations: Vec<String>,
         translation_lang: Lang,
     ) -> Result<Self, TranslationRecordError> {
+        let id = TranslationId::from(id);
         let word = Word::new(word, word_lang)?;
         let translations = Translations::new(translations, translation_lang)?;
 
         Ok(TranslationRecord {
+            id: id,
             word: word,
             translations: translations,
         })
     }
 
-    pub fn flat(&self) -> (&String, &Lang, &Vec<String>, &Lang) {
+    pub fn id(&self) -> &TranslationId {
+        &self.id
+    }
+
+    pub fn flat(&self) -> (&Option<String>, &String, &Lang, &Vec<String>, &Lang) {
+        let id = &self.id.value();
         let word = &self.word.value();
         let trans = &self.translations.value();
-        (word.0, word.1, trans.0, trans.1)
+        (id, word.0, word.1, trans.0, trans.1)
     }
 }
 
@@ -156,15 +196,24 @@ mod tests {
 
     #[test]
     fn translation_record_new_ok_input_constructed() {
+        let id = Some("1234".to_string());
+
         let word = "chien".to_string();
         let word_lang = Lang::fr;
 
         let translations = vec!["hund".to_string(), "köter".to_string()];
         let translation_lang = Lang::de;
 
-        let chien = TranslationRecord::new(word, word_lang, translations.clone(), translation_lang)
-            .unwrap();
+        let chien = TranslationRecord::new(
+            id.clone(),
+            word,
+            word_lang,
+            translations.clone(),
+            translation_lang,
+        )
+        .unwrap();
 
+        assert_eq!(*chien.id.value(), id);
         assert_eq!(chien.word.word, "chien");
         assert_eq!(chien.word.lang, Lang::fr);
         assert_eq!(chien.translations.lang, Lang::de);
@@ -181,7 +230,13 @@ mod tests {
         let translations = vec!["hund".to_string(), "".to_string()];
         let translation_lang = Lang::de;
 
-        let chien = TranslationRecord::new(word, word_lang, translations.clone(), translation_lang);
+        let chien = TranslationRecord::new(
+            None,
+            word,
+            word_lang,
+            translations.clone(),
+            translation_lang,
+        );
 
         assert_eq!(chien.is_err(), true);
         assert_eq!(
@@ -189,4 +244,6 @@ mod tests {
             TranslationRecordError::EmptyWordInTranslation
         );
     }
+
+    //todo: test Some("".to_string()) should lead to None in TranslationId
 }
