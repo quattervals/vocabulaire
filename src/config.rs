@@ -13,7 +13,7 @@ const AUTH_DB: &str = "AUTH_DB";
 
 
 
-const TEST_CONFIG_PATH: &str = "src/tests/test_config.toml";
+const CONFIG_PATH: &str = "resources/config.toml";
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -62,7 +62,7 @@ impl PersistenceConfig {
 
 pub fn parse_local_config() -> Config {
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    d.push(TEST_CONFIG_PATH);
+    d.push(CONFIG_PATH);
     parse_config(d)
 }
 
@@ -113,7 +113,7 @@ mod tests {
     #[serial]
     fn should_parse_a_config() {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        d.push(TEST_CONFIG_PATH);
+        d.push(CONFIG_PATH);
         let config = parse_config(d);
         let pers = config.persistence;
 
@@ -122,7 +122,7 @@ mod tests {
         assert_eq!("root", pers.user);
         assert_eq!("tran5lation5", pers.password);
         assert_eq!("translations", pers.database);
-        assert_eq!("test_translation", pers.schema_collection);
+        assert_eq!("translation", pers.schema_collection);
         assert_eq!("admin", pers.auth_db);
     }
 
@@ -140,7 +140,7 @@ mod tests {
         }
 
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        d.push(TEST_CONFIG_PATH);
+        d.push(CONFIG_PATH);
         let config = parse_config(d);
         let pers = config.persistence;
 
