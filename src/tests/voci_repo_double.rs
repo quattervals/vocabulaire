@@ -41,10 +41,10 @@ pub mod repo_double {
                 return Err(RepoCreateError::Unknown(String::from("Error occurred")));
             }
 
-            let (word, lang, translations, translation_lang) = tr.flat();
+            let (id, word, lang, translations, translation_lang) = tr.flat();
 
             let s = TranslationRecord::new(
-                //todo: add id
+                Some(TRANSLATION_ID.to_string()),
                 word.clone(),
                 lang.clone(),
                 translations.clone(),

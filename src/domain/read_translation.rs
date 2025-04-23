@@ -17,6 +17,7 @@ pub fn read_translation(word: &str, lang: &Lang) -> Result<TranslationRecord, Re
     let _word = Word::new(word.to_string(), lang.clone())?;
 
     Ok(TranslationRecord::new(
+        None,
         "chien".to_string(),
         Lang::fr,
         vec!["hund".to_string(), "köter".to_string()],
