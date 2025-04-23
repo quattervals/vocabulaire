@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::domain::Entity;
+
 // Todo:
 // - nicer "value()" for TranslationRecord
 
@@ -25,7 +27,7 @@ pub enum TranslationRecordError {
     Unknown(String),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Word {
     word: String,
     lang: Lang,
@@ -43,7 +45,7 @@ impl Word {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct Translations {
     lang: Lang,
     words: Vec<String>,
@@ -70,7 +72,7 @@ impl Translations {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TranslationRecord {
     word: Word,
     translations: Translations,
@@ -98,6 +100,8 @@ impl TranslationRecord {
         (word.0, word.1, trans.0, trans.1)
     }
 }
+
+impl Entity for TranslationRecord {}
 
 #[cfg(test)]
 mod tests {

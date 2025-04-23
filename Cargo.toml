@@ -8,6 +8,7 @@ authors = ["Herbert"]
 [dependencies]
 thiserror = "2.0"
 actix-web = "4.10"
+actix-rt = "2.10"
 validator = { version = "0.20", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
 env_logger = "0.11"
