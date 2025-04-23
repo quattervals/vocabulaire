@@ -22,3 +22,7 @@ Stop:
 `docker compose -f docker/docker-compose.yml down`
 oder
 `docker container stop mongo_container && docker rm mongo_container`
+
+
+Clean the local DB, *danger zone* prefix with sudo
+`rm -rf data/db/*`
