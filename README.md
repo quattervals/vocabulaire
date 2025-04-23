@@ -17,3 +17,8 @@ Showcase for hexagonal architecture
 
 Start the docker container with the DB
 `docker compose -f docker/docker-compose.yml up -d --build`
+
+Stop:
+`docker compose -f docker/docker-compose.yml down`
+oder
+`docker container stop mongo_container && docker rm mongo_container`
