@@ -16,9 +16,6 @@ pub enum CreateError {
     //error if this translation item already exists
 }
 
-//todo
-// add side effect of storing this Translation record
-// maybe return ID from storing
 pub async fn create_translation<T: Repository<TranslationRecord>>(
     repository: web::Data<T>,
     word: &str,

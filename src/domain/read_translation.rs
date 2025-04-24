@@ -1,43 +1,63 @@
-use crate::domain::voci::{Lang, TranslationRecord, TranslationRecordError, Word};
-
+use actix_web::web;
 use thiserror::Error;
+
+use crate::Repository;
+use crate::domain::voci::{Lang, TranslationRecord, TranslationRecordError, Word};
+use crate::driven::repository::RepoReadError;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum ReadError {
     #[error("Bad Input: {0}")]
     QueryWord(#[from] TranslationRecordError),
-    // #[error("Translation not found")]
-    // NotFound,
+    #[error("Translation not found")]
+    RecordNotFound,
+    #[error("Unknown")]
+    Unknown(String),
 }
 
-//todo
-// add side effect of actually finding this Translation record
-// add finding via ID
-pub fn read_translation(word: &str, lang: &Lang) -> Result<TranslationRecord, ReadError> {
-    let _word = Word::new(word.to_string(), lang.clone())?;
+pub async fn read_translation<T: Repository<TranslationRecord>>(
+    repository: web::Data<T>,
+    word: &str,
+    lang: &Lang,
+) -> Result<TranslationRecord, ReadError> {
+    let word = Word::new(word.to_string(), lang.clone())?;
 
-    Ok(TranslationRecord::new(
-        None,
-        "chien".to_string(),
-        Lang::fr,
-        vec!["hund".to_string(), "köter".to_string()],
-        Lang::de,
-    )?)
+    let result: Result<TranslationRecord, crate::driven::repository::RepoReadError> =
+        repository.read_by_word(&word).await;
+
+    result.map_err(|e| match e {
+        RepoReadError::NotFound => ReadError::RecordNotFound,
+        RepoReadError::Unknown(s) => ReadError::Unknown(s),
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::tests::test_utils::shared::*;
+    use actix_web::web::Data;
 
-    #[test]
-    fn read_ok_word_ok() {
-        matches!(read_translation(WORD, &WORD_LANG), Ok(_));
+    use super::*;
+    use crate::tests::{test_utils::shared::*, voci_repo_double::repo_double::VociRepoDouble};
+
+
+    #[actix_rt::test]
+    async fn read_well_formatted_word() {
+        let repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
+
+        let read_trans = read_translation(Data::new(repo), WORD, &WORD_LANG).await;
+
+        assert_eq!(stub_translation_record(false), read_trans.unwrap())
     }
-    #[test]
-    fn read_bad_word_err() {
-        let read_trans = read_translation("", &WORD_LANG);
+
+    #[actix_rt::test]
+    async fn read_badly_formatted_word_err() {
+        let repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
+
+        let read_trans = read_translation(Data::new(repo), "", &WORD_LANG).await;
+
         assert_eq!(read_trans.is_err(), true);
-        assert_eq!(read_trans.unwrap_err(), ReadError::QueryWord(TranslationRecordError::EmptyWord));
+        assert_eq!(
+            read_trans.unwrap_err(),
+            ReadError::QueryWord(TranslationRecordError::EmptyWord)
+        );
     }
 }
