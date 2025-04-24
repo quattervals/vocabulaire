@@ -40,7 +40,7 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
 
     //todo: check if this translation already exists
 
-    repository.create(tr).await.map_err(|e| {
+    repository.create(&tr).await.map_err(|e| {
         return match e {
             RepoCreateError::InvalidData(e) => CreateError::InvalidData(e),
             RepoCreateError::Unknown(e) => CreateError::Unknown(e),

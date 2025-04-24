@@ -5,7 +5,7 @@ use thiserror::Error;
 #[derive(Debug, PartialEq, Error)]
 pub enum ReadError {
     #[error("Bad Input: {0}")]
-    WordError(#[from] TranslationRecordError),
+    QueryWord(#[from] TranslationRecordError),
     // #[error("Translation not found")]
     // NotFound,
 }
@@ -38,6 +38,6 @@ mod tests {
     fn read_bad_word_err() {
         let read_trans = read_translation("", &WORD_LANG);
         assert_eq!(read_trans.is_err(), true);
-        assert_eq!(read_trans.unwrap_err(), ReadError::WordError(TranslationRecordError::EmptyWord));
+        assert_eq!(read_trans.unwrap_err(), ReadError::QueryWord(TranslationRecordError::EmptyWord));
     }
 }
