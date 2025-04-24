@@ -8,10 +8,18 @@ use mongodb::{Client, Collection, bson};
 use serde::{Deserialize, Serialize};
 
 use crate::config::PersistenceConfig;
-use crate::domain::voci::{Lang, TranslationRecord, TranslationRecordError};
-use crate::driven::repository::{RepoCreateError, Repository};
+use crate::domain::voci::{Lang, TranslationRecord, TranslationRecordError, Word};
+use crate::driven::repository::{RepoCreateError, RepoReadError, Repository};
 
-use super::FindTranslationRecord;
+// Implement the `From<Lang> for Bson` trait
+impl From<Lang> for bson::Bson {
+    fn from(lang: Lang) -> Self {
+        bson::Bson::String(match lang {
+            Lang::fr => "fr".to_string(),
+            Lang::de => "de".to_string(),
+        })
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VociMongo {
@@ -97,7 +105,8 @@ impl Repository<TranslationRecord> for VociMongoRepository {
         })
     }
 
-    async fn create(&self, tr: TranslationRecord) -> Result<TranslationRecord, RepoCreateError> {
+    //todo: pass TranslationRecord by Reference (From trait is by value)
+    async fn create(&self, tr: &TranslationRecord) -> Result<TranslationRecord, RepoCreateError> {
         let voci_mongo = VociMongo::from(tr.clone());
         let translation_collection = self.get_collection().await;
 
@@ -120,6 +129,33 @@ impl Repository<TranslationRecord> for VociMongoRepository {
         .unwrap();
         Ok(created_tr)
     }
+
+    async fn read_by_word(&self, word: &Word) -> Result<TranslationRecord, RepoReadError> {
+        let word = word.value();
+        let doc = doc! {"word": word.0, "lang": word.1};
+
+        let translation_collection = self.get_collection().await;
+
+        let result = translation_collection.find_one(doc).await;
+
+        let found = match result {
+            Ok(v) => match v {
+                Some(v) => v,
+                None => return Err(RepoReadError::NotFound),
+            },
+            Err(_) => {
+                return Err(RepoReadError::Unknown(
+                    "unknown error reading by word".to_string(),
+                ));
+            }
+        };
+
+        found
+            .try_into()
+            .map_err(|e: TranslationRecordError| match e {
+                _ => RepoReadError::Unknown(e.to_string()),
+            })
+    }
 }
 
 /// create connection uri
@@ -136,20 +172,26 @@ fn create_connection_uri(config: &PersistenceConfig) -> String {
     )
 }
 
+// todo: do we need this foo?
+fn compose_read_by_word_document(word: &Word) -> Result<Document, Error> {
+    let word = word.value();
+
+    Ok(doc! {"word": word.0, "lang": word.1})
+}
+
 #[cfg(test)]
 mod tests {
     use crate::tests::test_utils::shared::{
-        get_testing_persistence_config, stub_translation_record,
+        assert_on_translation_record, get_testing_persistence_config, stub_translation_record,
     };
     use serial_test::serial;
 
     use super::*;
 
-    #[test]
     #[serial]
-    fn new_repo_ok_config_repo_created() {
-        let config = get_testing_persistence_config();
-        let repo: VociMongoRepository = Repository::<TranslationRecord>::new(&config).unwrap();
+    #[actix_rt::test]
+    async fn new_repo_ok_config_repo_created() {
+        let repo = setup_repo().await;
         assert_eq!(
             repo.conn_uri,
             "mongodb://root:tran5lation5@localhost:27017/admin"
@@ -171,17 +213,56 @@ mod tests {
     #[serial]
     #[actix_rt::test]
     async fn create_ok_parameters_record_created() {
-        let repo: VociMongoRepository =
-            Repository::<TranslationRecord>::new(&get_testing_persistence_config()).unwrap();
+        let repo = setup_repo().await;
 
-        let result = repo.create(stub_translation_record(false)).await.unwrap();
-        let result = result.flat();
+        let result = repo.create(&stub_translation_record(false)).await.unwrap();
         let expected = stub_translation_record(true);
-        let expected = expected.flat();
 
-        assert_eq!(result.1, expected.1);
-        assert_eq!(result.2, expected.2);
-        assert_eq!(result.3, expected.3);
-        assert_eq!(result.4, expected.4);
+        assert_on_translation_record(&result, &expected, false);
+    }
+
+    #[serial]
+    #[actix_rt::test]
+    async fn read_by_existing_word_return_translation_record() {
+        let repo = setup_repo().await;
+        let tr = stub_translation_record(false);
+        repo.create(&tr).await.unwrap();
+
+        let inserted_word = tr.word();
+        let result = repo.read_by_word(inserted_word).await.unwrap();
+
+        assert_on_translation_record(&result, &tr, false);
+    }
+
+    #[serial]
+    #[actix_rt::test]
+    async fn read_by_nonexisting_word_return_notfounderror() {
+        let repo = setup_repo().await;
+        let tr = stub_translation_record(false);
+        let _ = repo.create(&tr).await.unwrap();
+
+        let non_existing_word = Word::new("nix".to_string(), Lang::de).unwrap();
+        let result = repo.read_by_word(&non_existing_word).await;
+
+        assert_eq!(result.is_err(), true);
+        assert_eq!(result.unwrap_err(), RepoReadError::NotFound);
+    }
+
+    async fn setup_repo() -> VociMongoRepository {
+        let config = get_testing_persistence_config();
+        let repo: VociMongoRepository = Repository::<TranslationRecord>::new(&config).unwrap();
+
+        delete_collection(config, &repo).await;
+
+        repo
+    }
+
+    async fn delete_collection(config: PersistenceConfig, repo: &VociMongoRepository) {
+        let collection = repo.get_collection().await;
+        let coll: Collection<VociMongoRepository> = collection
+            .client()
+            .database(&config.database)
+            .collection(&config.schema_collection);
+        coll.delete_many(doc! {}).await.unwrap();
     }
 }

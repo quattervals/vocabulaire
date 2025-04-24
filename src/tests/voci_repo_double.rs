@@ -4,8 +4,10 @@ pub mod repo_double {
     use std::cell::RefCell;
 
     use crate::config::PersistenceConfig;
-    use crate::domain::voci::TranslationRecord;
-    use crate::driven::repository::{RepoCreateError, Repository};
+    use crate::domain::voci::{TranslationRecord, Word};
+    use crate::driven::repository::{
+        RepoCreateError, RepoReadError, Repository,
+    };
     use crate::tests::test_utils::shared::*;
 
     struct Wrap(RefCell<bool>);
@@ -35,7 +37,7 @@ pub mod repo_double {
 
         async fn create(
             &self,
-            tr: TranslationRecord,
+            tr: &TranslationRecord,
         ) -> Result<TranslationRecord, RepoCreateError> {
             if self.has_error.0.take() {
                 return Err(RepoCreateError::Unknown(String::from("Error occurred")));
@@ -53,6 +55,11 @@ pub mod repo_double {
             .unwrap();
 
             Ok(s)
+        }
+
+        async fn read_by_word(&self, find_tr: &Word) -> Result<TranslationRecord, RepoReadError> {
+
+            Err(RepoReadError::Unknown("dunno".to_string()))
         }
     }
 }

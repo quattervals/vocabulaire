@@ -2,6 +2,8 @@ use actix_web::body::None;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use mongodb::bson::Bson;
+
 use crate::domain::Entity;
 
 /// Represents available languages in the system
@@ -131,6 +133,10 @@ impl TranslationRecord {
 
     pub fn id(&self) -> &TranslationId {
         &self.id
+    }
+
+    pub fn word(&self) -> &Word {
+        &self.word
     }
 
     pub fn flat(&self) -> (&Option<String>, &String, &Lang, &Vec<String>, &Lang) {

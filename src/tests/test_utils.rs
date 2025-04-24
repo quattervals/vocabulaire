@@ -40,6 +40,30 @@ pub mod shared {
         .unwrap()
     }
 
+    pub fn assert_on_translations(actual: &Vec<String>, expected: &Vec<String>) {
+        assert_eq!(actual.len(), expected.len());
+        for (i, item) in expected.iter().enumerate() {
+            assert_eq!(&actual[i], item);
+        }
+    }
+
+    pub fn assert_on_translation_record(
+        actual: &TranslationRecord,
+        expected: &TranslationRecord,
+        check_id: bool,
+    ) {
+        let actual = actual.flat();
+        let expected: (&Option<String>, &String, &Lang, &Vec<String>, &Lang) = expected.flat();
+
+        if check_id {
+            assert_eq!(actual.0.as_ref().unwrap(), expected.0.as_ref().unwrap());
+        }
+        assert_eq!(actual.1, expected.1);
+        assert_eq!(actual.2, expected.2);
+        assert_on_translations(actual.3, expected.3);
+        assert_eq!(actual.2, expected.2);
+    }
+
     pub fn get_testing_persistence_config() -> PersistenceConfig {
         get_testing_config().persistence
     }

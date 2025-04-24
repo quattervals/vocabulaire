@@ -108,7 +108,7 @@ pub async fn read_translation(
     result
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
-            ReadError::WordError(e) => ApiError::InvalidData(e.to_string()),
+            ReadError::QueryWord(e) => ApiError::InvalidData(e.to_string()),
         })?
 }
 
@@ -388,10 +388,5 @@ mod tests {
         assert_eq!(&actual.translation_lang, translation_lang);
     }
 
-    fn assert_on_translations(actual: &Vec<String>, expected: &Vec<String>) {
-        assert_eq!(actual.len(), expected.len());
-        for (i, item) in expected.iter().enumerate() {
-            assert_eq!(&actual[i], item);
-        }
-    }
+
 }
