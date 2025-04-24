@@ -44,7 +44,7 @@ impl From<TranslationRecord> for TranslationResponse {
 #[derive(Clone, Debug, Deserialize, Serialize, Validate)]
 pub struct CreateTranslationRequest {
     pub id: Option<String>,
-    #[validate(length(min = 1, message = "name is required and must be at least 1 character"))]
+    #[validate(length(min = 1, message = "Word is required and must be at least 1 character"))]
     pub word: String,
     pub lang: Lang,
     #[validate(length(
@@ -81,7 +81,7 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
 
 #[derive(Clone, Debug, Deserialize, Serialize, Validate)]
 pub struct RequestTranslationByWord {
-    #[validate(length(min = 1, message = "name is required and must be at least 1 character"))]
+    #[validate(length(min = 1, message = "Word is required and must be at least 1 character"))]
     pub word: String,
     pub lang: Lang,
 }
@@ -97,20 +97,24 @@ pub async fn delete_translation(
     }
 }
 
-pub async fn read_translation(
+pub async fn read_translation<T: Repository<TranslationRecord>>(
+    repository: web::Data<T>,
     request: Json<RequestTranslationByWord>,
 ) -> Result<Json<TranslationResponse>, ApiError> {
     validate(&request)?;
 
     let result: Result<TranslationRecord, ReadError> =
-        domain::read_translation::read_translation(&request.word, &request.lang);
+        domain::read_translation::read_translation(repository, &request.word, &request.lang).await;
 
     result
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
             ReadError::QueryWord(e) => ApiError::InvalidData(e.to_string()),
+            ReadError::RecordNotFound => ApiError::NotFound(e.to_string()),
+            ReadError::Unknown(s) => ApiError::Unknown(s)
         })?
 }
+
 
 pub async fn update_translation(
     request: Json<CreateTranslationRequest>,
@@ -235,7 +239,7 @@ mod tests {
             None,
             web::get(),
             TestRequest::get(),
-            read_translation,
+            read_translation::<VociMongoRepository>,
             Some(read_req),
         )
         .await;

@@ -5,9 +5,7 @@ pub mod repo_double {
 
     use crate::config::PersistenceConfig;
     use crate::domain::voci::{TranslationRecord, Word};
-    use crate::driven::repository::{
-        RepoCreateError, RepoReadError, Repository,
-    };
+    use crate::driven::repository::{RepoCreateError, RepoReadError, Repository};
     use crate::tests::test_utils::shared::*;
 
     struct Wrap(RefCell<bool>);
@@ -57,9 +55,14 @@ pub mod repo_double {
             Ok(s)
         }
 
-        async fn read_by_word(&self, find_tr: &Word) -> Result<TranslationRecord, RepoReadError> {
+        async fn read_by_word(&self, _: &Word) -> Result<TranslationRecord, RepoReadError> {
+            if self.has_error.0.take() {
+                return Err(RepoReadError::Unknown(
+                    "Unknown error in repo double".to_string(),
+                ))
+            }
 
-            Err(RepoReadError::Unknown("dunno".to_string()))
+            Ok(stub_translation_record(false))
         }
     }
 }
