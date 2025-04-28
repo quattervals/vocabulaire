@@ -22,10 +22,13 @@ pub enum RepoReadError {
     Unknown(String),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum RepoUpdateError {
+    #[error("Not Found")]
     NotFound,
+    #[error("Nothing found")]
     NoChange,
+    #[error("Unknown")]
     Unknown,
 }
 

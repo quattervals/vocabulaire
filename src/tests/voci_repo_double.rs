@@ -71,7 +71,7 @@ pub mod repo_double {
                 return Err(RepoUpdateError::NotFound);
             }
 
-            Ok(stub_translation_record(false))
+            Ok(tr.clone())
         }
     }
 }
