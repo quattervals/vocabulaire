@@ -11,6 +11,8 @@ use crate::config::PersistenceConfig;
 use crate::domain::voci::{Lang, TranslationRecord, TranslationRecordError, Word};
 use crate::driven::repository::{RepoCreateError, RepoReadError, Repository};
 
+use super::RepoUpdateError;
+
 // Implement the `From<Lang> for Bson` trait
 impl From<Lang> for bson::Bson {
     fn from(lang: Lang) -> Self {
@@ -155,6 +157,10 @@ impl Repository<TranslationRecord> for VociMongoRepository {
             .map_err(|e: TranslationRecordError| match e {
                 _ => RepoReadError::Unknown(e.to_string()),
             })
+    }
+
+    async fn update(&self, tr: &TranslationRecord) -> Result<TranslationRecord, RepoUpdateError> {
+        Err(RepoUpdateError::NoChange)
     }
 }
 

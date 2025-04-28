@@ -1,4 +1,3 @@
-use actix_web::body::None;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
