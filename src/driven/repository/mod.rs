@@ -22,9 +22,11 @@ pub enum RepoReadError {
     Unknown(String),
 }
 
+#[derive(Debug, PartialEq)]
 pub enum RepoUpdateError {
     NotFound,
     NoChange,
+    Unknown,
 }
 
 // /// Structure to specify agreed format for passing the lookup value through the port.
