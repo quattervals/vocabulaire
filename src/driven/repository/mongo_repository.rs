@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use async_trait::async_trait;
 use mongodb::bson::oid::ObjectId;
 use mongodb::bson::{Document, doc};
@@ -158,7 +160,40 @@ impl Repository<TranslationRecord> for VociMongoRepository {
     }
 
     async fn update(&self, tr: &TranslationRecord) -> Result<TranslationRecord, RepoUpdateError> {
-        Err(RepoUpdateError::NoChange)
+        let oid = match tr.id().value() {
+            Some(v) => v,
+            None => return Err(RepoUpdateError::NotFound),
+        };
+
+        let object_id = match ObjectId::from_str(oid) {
+            Ok(id) => id,
+            Err(e) => return Err(RepoUpdateError::NotFound),
+        };
+
+        let collection = self.get_collection().await;
+
+        let res = collection
+            .update_one(
+                doc! {
+                    "_id": object_id
+                },
+                doc! {
+                    "$set": {
+                        "translations": tr.flat().3              }
+                },
+            )
+            .await;
+
+        return match res {
+            Ok(r) => {
+                if r.matched_count > 0 {
+                    Ok(tr.clone())
+                } else {
+                    Err(RepoUpdateError::NotFound)
+                }
+            }
+            Err(e) => Err(RepoUpdateError::Unknown),
+        };
     }
 }
 
@@ -186,7 +221,8 @@ fn compose_read_by_word_document(word: &Word) -> Result<Document, Error> {
 #[cfg(test)]
 mod tests {
     use crate::tests::test_utils::shared::{
-        assert_on_translation_record, get_testing_persistence_config, stub_translation_record,
+        ADDITONAL_TRANSLATIONS, assert_on_translation_record, get_testing_persistence_config,
+        stub_translation_record,
     };
     use serial_test::serial;
 
@@ -250,6 +286,33 @@ mod tests {
 
         assert_eq!(result.is_err(), true);
         assert_eq!(result.unwrap_err(), RepoReadError::NotFound);
+    }
+
+    #[serial]
+    #[actix_rt::test]
+    async fn update_ok_record_return_updated_record() {
+        let repo = setup_repo().await;
+        let mut tr = repo.create(&stub_translation_record(false)).await.unwrap();
+        let extra_translations = ADDITONAL_TRANSLATIONS.map(|r| r.to_string()).to_vec();
+        let mut expected_tr = tr.clone();
+        expected_tr.update(extra_translations.clone(), Lang::de);
+        tr.update(extra_translations, Lang::de);
+
+        let updated_tr = repo.update(&tr).await.unwrap();
+
+        assert_eq!(updated_tr, expected_tr);
+    }
+
+    #[serial]
+    #[actix_rt::test]
+    async fn update_without_id_record_return_error() {
+        let repo = setup_repo().await;
+        let tr = &stub_translation_record(false);
+        let _ = repo.create(&tr).await.unwrap();
+
+        let updated_tr = repo.update(&tr).await;
+
+        assert_eq!(updated_tr.unwrap_err(), RepoUpdateError::NotFound);
     }
 
     async fn setup_repo() -> VociMongoRepository {
