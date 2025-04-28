@@ -13,6 +13,9 @@ pub enum UpdateError {
     NotFound,
     #[error("Read Error: {0}")]
     ReadError(#[from] RepoReadError),
+    #[error("Update Error:")]
+    UpdateError(#[from] RepoUpdateError),
+
 }
 
 /// Updates a translation record for a given word and language.
@@ -40,14 +43,9 @@ pub async fn update_translation<T: Repository<TranslationRecord>>(
 ) -> Result<TranslationRecord, UpdateError> {
     let word = Word::new(word.to_string(), lang.clone())?;
 
-    let mut result = repository.read_by_word(&word).await?;
+    let mut tr_to_be_updated = repository.read_by_word(&word).await?;
 
-    // das TR holen
-    // das TR updaten (domain)
-    // das TR updaten (repo)
-    // das updated TR zurückgeben
-
-    result.update(
+    tr_to_be_updated.update(
         extra_translations
             .into_iter()
             .map(|t| t.to_string())
@@ -55,7 +53,9 @@ pub async fn update_translation<T: Repository<TranslationRecord>>(
         extra_translation_lang.clone(),
     );
 
-    Ok(result)
+    let updated_tr = repository.update(&tr_to_be_updated).await?;
+
+    Ok(updated_tr)
 }
 
 #[cfg(test)]
