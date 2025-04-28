@@ -142,11 +142,13 @@ pub async fn update_translation<T: Repository<TranslationRecord>>(
 mod tests {
     use actix_web::test::TestRequest;
     use actix_web::{App, FromRequest, Handler, Responder, Route, test, web::Data};
+    use serial_test::serial;
 
     use super::*;
     use crate::driven::repository::mongo_repository::VociMongoRepository;
     use crate::tests::test_utils::shared::*;
 
+    #[serial]
     #[actix_web::test]
     async fn create_translation_ok_input_same_translation_returned() {
         let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
@@ -182,14 +184,33 @@ mod tests {
         assert_on_translation_response(&resp, &expected, false);
     }
 
+    #[serial]
     #[actix_web::test]
     async fn delete_translation_ok_input_http_success() {
         let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
+        let create_req = CreateTranslationRequest {
+            id: None,
+            word: WORD.to_string(),
+            lang: WORD_LANG,
+            translations: stub_translations(),
+            translation_lang: TRANSLATION_LANG,
+        };
+        let _: TranslationResponse = execute(
+            &repo,
+            "/",
+            None,
+            web::post(),
+            TestRequest::post(),
+            create_translation::<VociMongoRepository>,
+            Some(create_req),
+        )
+        .await;
+
+
         let del_req = RequestTranslationByWord {
             word: WORD.to_string(),
             lang: WORD_LANG,
         };
-
         let r = execute_http(
             &repo,
             "/",
@@ -204,6 +225,8 @@ mod tests {
         assert_eq!(r.status().is_success(), true);
     }
 
+    
+    #[serial]
     #[actix_web::test]
     async fn delete_translation_bad_input_http_client_error() {
         let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
@@ -226,13 +249,12 @@ mod tests {
         assert_eq!(r.status().is_client_error(), true);
     }
 
-    //todo: read translation by ID
-
+    #[serial]
     #[actix_web::test]
     async fn read_translation_by_word_good_input_http_translation_returned() {
         let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
         let read_req = RequestTranslationByWord {
-            word: "chien".to_string(),
+            word: WORD.to_string(),
             lang: WORD_LANG,
         };
 

@@ -3,8 +3,7 @@ use thiserror::Error;
 
 use crate::Repository;
 use crate::domain::voci::{Lang, TranslationRecord, TranslationRecordError, Word};
-use crate::driven::repository::{RepoUpdateError, RepoReadError};
-
+use crate::driven::repository::{RepoReadError, RepoUpdateError};
 
 #[derive(Debug, PartialEq, Error)]
 pub enum UpdateError {
@@ -41,30 +40,22 @@ pub async fn update_translation<T: Repository<TranslationRecord>>(
 ) -> Result<TranslationRecord, UpdateError> {
     let word = Word::new(word.to_string(), lang.clone())?;
 
-    let result =
-    repository.read_by_word(&word).await?;
+    let mut result = repository.read_by_word(&word).await?;
 
+    // das TR holen
+    // das TR updaten (domain)
+    // das TR updaten (repo)
+    // das updated TR zurückgeben
 
-
-
-
-
-     let mut translations = vec![];
-    // let mut extra_translations: Vec<String> =
-    //     extra_translations.iter().map(|s| s.to_string()).collect();
-    // translations.append(&mut extra_translations);
-
-    // let (word, lang) = word.value();
-
-    Ok(TranslationRecord::new(
-        None,
-        "".to_string(),
-        lang.clone(),
-        translations,
+    result.update(
+        extra_translations
+            .into_iter()
+            .map(|t| t.to_string())
+            .collect(),
         extra_translation_lang.clone(),
-    )?)
+    );
 
-
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -74,13 +65,9 @@ mod tests {
     use super::*;
     use crate::tests::{test_utils::shared::*, voci_repo_double::repo_double::VociRepoDouble};
 
-
-
     #[actix_rt::test]
     async fn update_existing_record_with_no_extra_word() {
         let repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
-
-
 
         let updated_tr = update_translation(
             Data::new(repo),
@@ -88,30 +75,23 @@ mod tests {
             &WORD_LANG,
             &[].to_vec(),
             &TRANSLATION_LANG,
-        ).await;
+        )
+        .await;
 
         let updated_translation = updated_tr.unwrap();
         let (_, _, _, actual_translations, _) = updated_translation.flat();
-        assert_on_translations(actual_translations, &TRANSLATIONS.map(|t| t.to_string()).to_vec());
+        assert_on_translations(
+            actual_translations,
+            &TRANSLATIONS.map(|t| t.to_string()).to_vec(),
+        );
     }
 
     #[actix_rt::test]
     async fn update_existing_record() {
         let repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
+        let mut expected = TRANSLATIONS.map(|t| t.to_string()).to_vec();
 
-        let extra_translations = TranslationRecord::new(
-            None,
-            WORD.to_string(),
-            WORD_LANG.clone(),
-            ADDITONAL_TRANSLATIONS.map(|t| t.to_string()).to_vec(),
-            TRANSLATION_LANG.clone(),
-        );
-
-        let mut additional_tranlations = ADDITONAL_TRANSLATIONS.map(|t| t.to_string()).to_vec();
-
-        let mut translations = TRANSLATIONS.map(|t| t.to_string()).to_vec();
-
-        translations.append(&mut additional_tranlations);
+        expected.append(&mut ADDITONAL_TRANSLATIONS.map(|t| t.to_string()).to_vec());
 
         let updated_tr = update_translation(
             Data::new(repo),
@@ -119,28 +99,11 @@ mod tests {
             &WORD_LANG,
             &ADDITONAL_TRANSLATIONS.to_vec(),
             &TRANSLATION_LANG,
-        ).await;
+        )
+        .await;
 
         let updated_translation = updated_tr.unwrap();
         let (_, _, _, actual_translations, _) = updated_translation.flat();
-        assert_on_translations(actual_translations, &translations);
+        assert_on_translations(actual_translations, &expected);
     }
-
-    // #[test]
-    // fn update_ok_word_ok() {
-    //     matches!(
-    //         update_translation(WORD, &WORD_LANG, &TRANSLATIONS.to_vec(), &TRANSLATION_LANG),
-    //         Ok(_)
-    //     );
-    // }
-    // #[test]
-    // fn update_bad_word_err() {
-    //     let upd_trans =
-    //         update_translation("", &WORD_LANG, &TRANSLATIONS.to_vec(), &TRANSLATION_LANG);
-    //     assert_eq!(upd_trans.is_err(), true);
-    //     assert_eq!(
-    //         upd_trans.unwrap_err(),
-    //         UpdateError::WordError(TranslationRecordError::EmptyWord)
-    //     )
-    // }
 }
