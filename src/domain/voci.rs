@@ -138,6 +138,14 @@ impl TranslationRecord {
         &self.word
     }
 
+    pub fn update(&mut self, translations: Vec<String>, lang: Lang) {
+        if &self.translations.lang == &lang {
+            self.translations
+                .words
+                .extend(translations.into_iter().filter(|s| !s.is_empty()));
+        }
+    }
+
     pub fn flat(&self) -> (&Option<String>, &String, &Lang, &Vec<String>, &Lang) {
         let id = &self.id.value();
         let word = &self.word.value();
@@ -150,6 +158,8 @@ impl Entity for TranslationRecord {}
 
 #[cfg(test)]
 mod tests {
+    use crate::tests::test_utils::shared::{ADDITONAL_TRANSLATIONS, stub_translation_record};
+
     use super::*;
 
     #[test]
@@ -248,6 +258,29 @@ mod tests {
             chien.unwrap_err(),
             TranslationRecordError::EmptyWordInTranslation
         );
+    }
+
+    #[test]
+    fn translation_record_update_correct_translation_record() {
+        let mut tr = stub_translation_record(true);
+        let extra_translations = ADDITONAL_TRANSLATIONS.map(|r| r.to_string()).to_vec();
+        let mut expected = tr.flat().3.clone();
+        expected.append(&mut extra_translations.clone());
+
+        tr.update(extra_translations, Lang::de);
+
+        assert_eq!(tr.flat().3, &expected);
+    }
+
+    #[test]
+    fn translation_record_update_different_language_no_update() {
+        let mut tr = stub_translation_record(true);
+        let extra_translations = ADDITONAL_TRANSLATIONS.map(|r| r.to_string()).to_vec();
+        let expected = tr.flat().3.clone();
+
+        tr.update(extra_translations, Lang::fr);
+
+        assert_eq!(tr.flat().3, &expected);
     }
 
     //todo: test Some("".to_string()) should lead to None in TranslationId
