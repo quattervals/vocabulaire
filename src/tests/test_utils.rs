@@ -18,6 +18,7 @@ pub mod shared {
     pub const WORD: &str = "chien";
     pub const WORD_LANG: Lang = Lang::fr;
     pub const TRANSLATIONS: [&str; 2] = ["hund", "köter"];
+    pub const ADDITONAL_TRANSLATIONS: [&str; 2] = ["Schäfer", "Jagdhund"];
     pub const TRANSLATION_LANG: Lang = Lang::de;
 
     pub fn stub_translations() -> Vec<String> {
