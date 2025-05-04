@@ -24,11 +24,21 @@ pub enum RepoReadError {
 
 #[derive(Error, Debug, PartialEq)]
 pub enum RepoUpdateError {
+    #[error("malformed id")]
+    BadId,
     #[error("Not Found")]
     NotFound,
-    #[error("Nothing found")]
-    NoChange,
     #[error("Unknown")]
+    Unknown,
+}
+
+#[derive(Error, Debug, PartialEq)]
+pub enum RepoDeleteError {
+    #[error("malformed id")]
+    BadId,
+    #[error("Not Found")]
+    NotFound,
+    #[error("Unknown repo delete error")]
     Unknown,
 }
 
@@ -59,11 +69,14 @@ where
     async fn create(&self, tr: &T) -> Result<T, RepoCreateError>;
 
     /// Read/find a TranslationRecord given a Word
-    async fn read_by_word(&self, find_tr: &Word) -> Result<T, RepoReadError>;
+    async fn read_by_word(&self, word: &Word) -> Result<T, RepoReadError>;
 
     /// Update a TranslationRecord given a TranslationRecord
     ///
-    /// The Word in the argument is used to identify the TranslationRecord.
+    /// The TranslationId in the argument is used to identify the TranslationRecord.
     /// Translations within it, are used to update the existing translations
     async fn update(&self, tr: &T) -> Result<T, RepoUpdateError>;
+
+    /// Delete a TranslationRecord given an ID
+    async fn delete(&self, id: &TranslationId) -> Result<(), RepoDeleteError>;
 }

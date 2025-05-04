@@ -4,8 +4,10 @@ pub mod repo_double {
     use std::cell::RefCell;
 
     use crate::config::PersistenceConfig;
-    use crate::domain::voci::{TranslationRecord, Word};
-    use crate::driven::repository::{RepoCreateError, RepoReadError, RepoUpdateError, Repository};
+    use crate::domain::voci::{TranslationRecord, TranslationId, Word};
+    use crate::driven::repository::{
+        RepoCreateError, RepoDeleteError, RepoReadError, RepoUpdateError, Repository,
+    };
     use crate::tests::test_utils::shared::*;
 
     struct Wrap(RefCell<bool>);
@@ -72,6 +74,10 @@ pub mod repo_double {
             }
 
             Ok(tr.clone())
+        }
+
+        async fn delete(&self, id: &TranslationId) -> Result<(), RepoDeleteError> {
+            Ok(())
         }
     }
 }

@@ -8,10 +8,10 @@ use mongodb::{Client, Collection, bson};
 use serde::{Deserialize, Serialize};
 
 use crate::config::PersistenceConfig;
-use crate::domain::voci::{Lang, TranslationRecord, TranslationRecordError, Word};
-use crate::driven::repository::{RepoCreateError, RepoReadError, Repository};
-
-use super::RepoUpdateError;
+use crate::domain::voci::{Lang, TranslationId, TranslationRecord, TranslationRecordError, Word};
+use crate::driven::repository::{
+    RepoCreateError, RepoDeleteError, RepoReadError, RepoUpdateError, Repository,
+};
 
 // Implement the `From<Lang> for Bson` trait
 impl From<Lang> for bson::Bson {
@@ -162,12 +162,12 @@ impl Repository<TranslationRecord> for VociMongoRepository {
     async fn update(&self, tr: &TranslationRecord) -> Result<TranslationRecord, RepoUpdateError> {
         let oid = match tr.id().value() {
             Some(v) => v,
-            None => return Err(RepoUpdateError::NotFound),
+            None => return Err(RepoUpdateError::BadId),
         };
 
         let object_id = match ObjectId::from_str(oid) {
             Ok(id) => id,
-            Err(e) => return Err(RepoUpdateError::NotFound),
+            Err(e) => return Err(RepoUpdateError::BadId),
         };
 
         let collection = self.get_collection().await;
@@ -194,6 +194,39 @@ impl Repository<TranslationRecord> for VociMongoRepository {
             }
             Err(e) => Err(RepoUpdateError::Unknown),
         };
+    }
+
+    async fn delete(&self, id: &TranslationId) -> Result<(), RepoDeleteError> {
+        let oid = match id.value() {
+
+            Some(v) => v,
+            None => return Err(RepoDeleteError::BadId),
+        };
+        let object_id = match ObjectId::from_str(oid) {
+            Ok(id) => id,
+            Err(e) => return Err(RepoDeleteError::BadId),
+        };
+
+        let collection = self.get_collection().await;
+
+        let res = collection
+            .delete_one(
+                doc! {
+                    "_id": object_id
+                }
+            )
+            .await;
+
+            return match res {
+                Ok(r) => {
+                    if r.deleted_count > 0 {
+                        Ok(())
+                    } else {
+                        Err(RepoDeleteError::NotFound)
+                    }
+                }
+                Err(e) => Err(RepoDeleteError::Unknown),
+            };
     }
 }
 
@@ -312,7 +345,51 @@ mod tests {
 
         let updated_tr = repo.update(&tr).await;
 
-        assert_eq!(updated_tr.unwrap_err(), RepoUpdateError::NotFound);
+        assert_eq!(updated_tr.unwrap_err(), RepoUpdateError::BadId);
+    }
+
+    #[serial]
+    #[actix_rt::test]
+    async fn delete_existing_id_ok() {
+        let repo = setup_repo().await;
+        let tr = &stub_translation_record(false);
+        let created_tr = repo.create(&tr).await.unwrap();
+
+        let delete_id = created_tr.id();
+
+        let del_res = repo.delete(&delete_id).await;
+
+        assert_eq!(del_res, Ok(()));
+    }
+
+    #[serial]
+    #[actix_rt::test]
+    async fn delete_non_existing_id_error() {
+        let repo = setup_repo().await;
+        let tr = &stub_translation_record(false);
+        let _ = repo.create(&tr).await.unwrap();
+
+        let delete_id = TranslationId::from("6817c21bf99716ff3f9968eb".to_string());
+
+        assert_eq!(
+            repo.delete(&delete_id).await.unwrap_err(),
+            RepoDeleteError::NotFound
+        );
+    }
+
+    #[serial]
+    #[actix_rt::test]
+    async fn delete_none_id_error() {
+        let repo = setup_repo().await;
+        let tr = &stub_translation_record(false);
+        let _ = repo.create(&tr).await.unwrap();
+
+        let delete_id = TranslationId::from("".to_string());
+
+        assert_eq!(
+            repo.delete(&delete_id).await.unwrap_err(),
+            RepoDeleteError::BadId
+        );
     }
 
     async fn setup_repo() -> VociMongoRepository {
