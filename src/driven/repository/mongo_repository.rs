@@ -146,16 +146,14 @@ impl Repository<TranslationRecord> for VociMongoRepository {
                 None => return Err(RepoReadError::NotFound),
             },
             Err(_) => {
-                return Err(RepoReadError::Unknown(
-                    "unknown error reading by word".to_string(),
-                ));
+                return Err(RepoReadError::Unknown);
             }
         };
 
         found
             .try_into()
             .map_err(|e: TranslationRecordError| match e {
-                _ => RepoReadError::Unknown(e.to_string()),
+                _ => RepoReadError::Unknown,
             })
     }
 

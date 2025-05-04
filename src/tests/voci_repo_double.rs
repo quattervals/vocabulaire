@@ -59,7 +59,7 @@ pub mod repo_double {
 
         async fn read_by_word(&self, _: &Word) -> Result<TranslationRecord, RepoReadError> {
             if self.has_error.0.take() {
-                return Err(RepoReadError::Unknown("Error while reading".to_string()));
+                return Err(RepoReadError::Unknown);
             }
 
             Ok(stub_translation_record(false))
@@ -77,6 +77,9 @@ pub mod repo_double {
         }
 
         async fn delete(&self, id: &TranslationId) -> Result<(), RepoDeleteError> {
+            if self.has_error.0.take() {
+                return Err(RepoDeleteError::Unknown);
+            }
             Ok(())
         }
     }

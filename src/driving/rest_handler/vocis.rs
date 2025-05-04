@@ -86,12 +86,13 @@ pub struct RequestTranslationByWord {
     pub lang: Lang,
 }
 
-pub async fn delete_translation(
+pub async fn delete_translation<T: Repository<TranslationRecord>>(
+    repository: web::Data<T>,
     request: Json<RequestTranslationByWord>,
 ) -> Result<HttpResponse, ApiError> {
     validate(&request)?;
 
-    match domain::delete_translation::delete_translation(&request.word, &request.lang) {
+    match domain::delete_translation::delete_translation(repository, &request.word, &request.lang).await {
         Ok(_) => Ok(HttpResponse::Ok().finish()),
         Err(e) => Err(ApiError::InvalidData(e.to_string())),
     }
@@ -111,7 +112,7 @@ pub async fn read_translation<T: Repository<TranslationRecord>>(
         .map_err(|e| match e {
             ReadError::QueryWord(e) => ApiError::InvalidData(e.to_string()),
             ReadError::RecordNotFound => ApiError::NotFound(e.to_string()),
-            ReadError::Unknown(s) => ApiError::Unknown(s),
+            ReadError::Unknown => ApiError::Unknown(e.to_string()),
         })?
 }
 
@@ -218,7 +219,7 @@ mod tests {
             None,
             web::delete(),
             TestRequest::delete(),
-            delete_translation,
+            delete_translation::<VociMongoRepository>,
             Some(del_req),
         )
         .await;
@@ -241,7 +242,7 @@ mod tests {
             None,
             web::delete(),
             TestRequest::delete(),
-            delete_translation,
+            delete_translation::<VociMongoRepository>,
             Some(del_req),
         )
         .await;

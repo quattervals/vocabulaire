@@ -57,7 +57,7 @@ fn routes(cfg: &mut web::ServiceConfig) {
                             web::resource("translations")
                                 .route(web::get().to(rest_handler::vocis::read_translation::<VociMongoRepository>))
                                 .route(web::post().to(rest_handler::vocis::create_translation::<VociMongoRepository>))
-                                .route(web::delete().to(rest_handler::vocis::delete_translation))
+                                .route(web::delete().to(rest_handler::vocis::delete_translation::<VociMongoRepository>))
                                 .route(web::put().to(rest_handler::vocis::update_translation::<VociMongoRepository>))
                         ).service(
                         web::resource("translations/{id}")
