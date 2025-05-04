@@ -8,10 +8,12 @@ use crate::domain::voci::{TranslationId, Word};
 
 pub mod mongo_repository;
 
-#[derive(Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum RepoCreateError {
+    #[error("Invalid Data")]
     InvalidData(String),
-    Unknown(String),
+    #[error("Unknown repo create error")]
+    Unknown,
 }
 
 #[derive(Error, Debug, PartialEq)]
