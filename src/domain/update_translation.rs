@@ -9,13 +9,10 @@ use crate::driven::repository::{RepoReadError, RepoUpdateError};
 pub enum UpdateError {
     #[error("Bad Input: {0}")]
     WordError(#[from] TranslationRecordError),
-    #[error("Translation not found")]
-    NotFound,
     #[error("Read Error: {0}")]
     ReadError(#[from] RepoReadError),
     #[error("Update Error:")]
     UpdateError(#[from] RepoUpdateError),
-
 }
 
 /// Updates a translation record for a given word and language.

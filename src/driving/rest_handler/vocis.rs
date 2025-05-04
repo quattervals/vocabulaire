@@ -6,7 +6,7 @@ use validator::Validate;
 use crate::domain::create_translation::CreateError;
 use crate::domain::read_translation::ReadError;
 use crate::domain::update_translation::UpdateError;
-use crate::domain::voci::{Lang, TranslationId, TranslationRecord};
+use crate::domain::voci::{Lang, TranslationRecord};
 use crate::{Repository, domain};
 
 use crate::driving::rest_handler::errors::ApiError;
@@ -22,7 +22,7 @@ where
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct TranslationResponse {
-    pub id: Option<String>, //todo: let's see if option string can be serialized
+    pub id: Option<String>,
     pub word: String,
     pub lang: Lang,
     pub translations: Vec<String>,
@@ -65,7 +65,7 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
         repository,
         &request.word,
         &request.lang,
-        &request.translations.iter().map(|s| s.as_str()).collect(), //todo split this to helper function
+        &request.translations.iter().map(|s| s.as_str()).collect(),
         &request.translation_lang,
     )
     .await;
@@ -73,7 +73,7 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
     result
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
-            CreateError::Unknown=> ApiError::Unknown(e.to_string()),
+            CreateError::Unknown => ApiError::Unknown(e.to_string()),
             CreateError::InvalidData(s) => ApiError::InvalidData(s.to_string()),
             CreateError::InvalidInput(m) => ApiError::InvalidData(m.to_string()),
         })?
@@ -92,7 +92,9 @@ pub async fn delete_translation<T: Repository<TranslationRecord>>(
 ) -> Result<HttpResponse, ApiError> {
     validate(&request)?;
 
-    match domain::delete_translation::delete_translation(repository, &request.word, &request.lang).await {
+    match domain::delete_translation::delete_translation(repository, &request.word, &request.lang)
+        .await
+    {
         Ok(_) => Ok(HttpResponse::Ok().finish()),
         Err(e) => Err(ApiError::InvalidData(e.to_string())),
     }
@@ -135,7 +137,6 @@ pub async fn update_translation<T: Repository<TranslationRecord>>(
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
             UpdateError::WordError(s) => ApiError::InvalidData(s.to_string()),
-            UpdateError::NotFound => ApiError::NotFound("Record not found".to_string()),
             UpdateError::ReadError(s) => ApiError::NotFound(s.to_string()),
             UpdateError::UpdateError(s) => ApiError::NotFound(s.to_string()),
         })?
@@ -172,6 +173,56 @@ mod tests {
             TestRequest::post(),
             create_translation::<VociMongoRepository>,
             Some(create_req),
+        )
+        .await;
+
+        let expected = TranslationRecord::new(
+            Some(TRANSLATION_ID.to_string()),
+            WORD.to_string(),
+            WORD_LANG,
+            stub_translations(),
+            TRANSLATION_LANG,
+        )
+        .unwrap();
+
+        assert_on_translation_response(&resp, &expected, false);
+    }
+
+    #[serial]
+    #[actix_web::test]
+    async fn read_translation_by_word_good_input_http_translation_returned() {
+        let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
+        let create_req = CreateTranslationRequest {
+            id: None,
+            word: WORD.to_string(),
+            lang: WORD_LANG,
+            translations: stub_translations(),
+            translation_lang: TRANSLATION_LANG,
+        };
+        let _: TranslationResponse = execute(
+            &repo,
+            "/",
+            None,
+            web::post(),
+            TestRequest::post(),
+            create_translation::<VociMongoRepository>,
+            Some(create_req),
+        )
+        .await;
+
+        let read_req = RequestTranslationByWord {
+            word: WORD.to_string(),
+            lang: WORD_LANG,
+        };
+
+        let resp: TranslationResponse = execute(
+            &repo,
+            "/",
+            None,
+            web::get(),
+            TestRequest::get(),
+            read_translation::<VociMongoRepository>,
+            Some(read_req),
         )
         .await;
 
@@ -250,57 +301,6 @@ mod tests {
         assert_eq!(r.status().is_client_error(), true);
     }
 
-    #[serial]
-    #[actix_web::test]
-    async fn read_translation_by_word_good_input_http_translation_returned() {
-        let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
-        let create_req = CreateTranslationRequest {
-            id: None,
-            word: WORD.to_string(),
-            lang: WORD_LANG,
-            translations: stub_translations(),
-            translation_lang: TRANSLATION_LANG,
-        };
-        let _: TranslationResponse = execute(
-            &repo,
-            "/",
-            None,
-            web::post(),
-            TestRequest::post(),
-            create_translation::<VociMongoRepository>,
-            Some(create_req),
-        )
-        .await;
-
-
-        let read_req = RequestTranslationByWord {
-            word: WORD.to_string(),
-            lang: WORD_LANG,
-        };
-
-        let resp: TranslationResponse = execute(
-            &repo,
-            "/",
-            None,
-            web::get(),
-            TestRequest::get(),
-            read_translation::<VociMongoRepository>,
-            Some(read_req),
-        )
-        .await;
-
-        let expected = TranslationRecord::new(
-            Some(TRANSLATION_ID.to_string()),
-            WORD.to_string(),
-            WORD_LANG,
-            stub_translations(),
-            TRANSLATION_LANG,
-        )
-        .unwrap();
-
-        assert_on_translation_response(&resp, &expected, false);
-    }
-
     /// Execute a test request and return HttpResponse
     async fn execute_http<F, Args, R>(
         repo: &R,
@@ -333,7 +333,7 @@ mod tests {
 
         // Set the JSON body if provided
         let req = match recipe_req {
-            Some(ref r) => req.set_json(recipe_req.unwrap()),
+            Some(ref _r) => req.set_json(recipe_req.unwrap()),
             None => req,
         };
 
@@ -377,7 +377,7 @@ mod tests {
 
         // Set json body
         let req = match recipe_req {
-            Some(ref r) => req.set_json(recipe_req.unwrap()),
+            Some(ref _r) => req.set_json(recipe_req.unwrap()),
             None => req,
         };
 
