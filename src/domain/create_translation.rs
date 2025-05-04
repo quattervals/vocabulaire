@@ -12,8 +12,7 @@ pub enum CreateError {
     #[error("Invalid Data to DB")]
     InvalidData(String),
     #[error("Unknown")]
-    Unknown(String),
-    //error if this translation item already exists
+    Unknown,
 }
 
 pub async fn create_translation<T: Repository<TranslationRecord>>(
@@ -40,7 +39,7 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
     repository.create(&tr).await.map_err(|e| {
         return match e {
             RepoCreateError::InvalidData(e) => CreateError::InvalidData(e),
-            RepoCreateError::Unknown(e) => CreateError::Unknown(e),
+            RepoCreateError::Unknown => CreateError::Unknown,
         };
     })
 }

@@ -40,7 +40,7 @@ pub mod repo_double {
             tr: &TranslationRecord,
         ) -> Result<TranslationRecord, RepoCreateError> {
             if self.has_error.0.take() {
-                return Err(RepoCreateError::Unknown(String::from("Error occurred")));
+                return Err(RepoCreateError::Unknown);
             }
 
             let (id, word, lang, translations, translation_lang) = tr.flat();

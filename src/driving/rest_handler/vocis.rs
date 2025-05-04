@@ -73,7 +73,7 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
     result
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
-            CreateError::Unknown(s) => ApiError::Unknown(s),
+            CreateError::Unknown=> ApiError::Unknown(e.to_string()),
             CreateError::InvalidData(s) => ApiError::InvalidData(s.to_string()),
             CreateError::InvalidInput(m) => ApiError::InvalidData(m.to_string()),
         })?

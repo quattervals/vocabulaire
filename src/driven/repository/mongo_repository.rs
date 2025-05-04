@@ -116,7 +116,7 @@ impl Repository<TranslationRecord> for VociMongoRepository {
 
         let inserted_id = match result {
             Ok(id) => id.inserted_id.as_object_id().unwrap(),
-            Err(e) => return Err(RepoCreateError::Unknown(e.to_string())),
+            Err(e) => return Err(RepoCreateError::Unknown),
         };
 
         let (_, word, lang, translations, translation_lang) = tr.flat();
