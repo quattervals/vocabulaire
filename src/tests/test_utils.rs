@@ -6,7 +6,7 @@ pub mod shared {
     use std::path::PathBuf;
 
     use crate::config::{Config, PersistenceConfig, parse_config};
-    use crate::domain::voci::{Lang, TranslationId, TranslationRecord};
+    use crate::domain::voci::{Lang, TranslationRecord};
 
     use crate::driven::repository::Repository;
     use crate::tests::voci_repo_double::repo_double::VociRepoDouble;
@@ -14,7 +14,7 @@ pub mod shared {
     /// Constants
 
     pub const TRANSLATION_ID: &str = "123";
-    pub const EMPTY_TRANSLATION_ID: &str = "";
+    pub const _EMPTY_TRANSLATION_ID: &str = "";
     pub const WORD: &str = "chien";
     pub const WORD_LANG: Lang = Lang::fr;
     pub const TRANSLATIONS: [&str; 2] = ["hund", "köter"];
@@ -26,7 +26,6 @@ pub mod shared {
     }
 
     pub fn stub_translation_record(with_id: bool) -> TranslationRecord {
-        //todo: add bool for ID
         TranslationRecord::new(
             if with_id {
                 Some(TRANSLATION_ID.to_string())
@@ -75,8 +74,4 @@ pub mod shared {
         parse_config(d)
     }
 
-    pub fn double_repo_data() -> Data<VociRepoDouble> {
-        let repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
-        Data::new(repo)
-    }
 }

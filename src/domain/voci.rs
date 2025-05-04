@@ -163,7 +163,7 @@ impl Entity for TranslationRecord {}
 #[cfg(test)]
 mod tests {
     use crate::tests::test_utils::shared::{
-        ADDITONAL_TRANSLATIONS, TRANSLATIONS, WORD, stub_translation_record,
+        ADDITONAL_TRANSLATIONS, TRANSLATIONS, stub_translation_record,
     };
 
     use super::*;

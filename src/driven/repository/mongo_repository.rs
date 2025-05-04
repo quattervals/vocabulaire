@@ -116,7 +116,7 @@ impl Repository<TranslationRecord> for VociMongoRepository {
 
         let inserted_id = match result {
             Ok(id) => id.inserted_id.as_object_id().unwrap(),
-            Err(e) => return Err(RepoCreateError::Unknown),
+            Err(_e) => return Err(RepoCreateError::Unknown),
         };
 
         let (_, word, lang, translations, translation_lang) = tr.flat();
@@ -165,7 +165,7 @@ impl Repository<TranslationRecord> for VociMongoRepository {
 
         let object_id = match ObjectId::from_str(oid) {
             Ok(id) => id,
-            Err(e) => return Err(RepoUpdateError::BadId),
+            Err(_) => return Err(RepoUpdateError::BadId),
         };
 
         let collection = self.get_collection().await;
@@ -190,7 +190,7 @@ impl Repository<TranslationRecord> for VociMongoRepository {
                     Err(RepoUpdateError::NotFound)
                 }
             }
-            Err(e) => Err(RepoUpdateError::Unknown),
+            Err(_) => Err(RepoUpdateError::Unknown),
         };
     }
 
@@ -202,7 +202,7 @@ impl Repository<TranslationRecord> for VociMongoRepository {
         };
         let object_id = match ObjectId::from_str(oid) {
             Ok(id) => id,
-            Err(e) => return Err(RepoDeleteError::BadId),
+            Err(_) => return Err(RepoDeleteError::BadId),
         };
 
         let collection = self.get_collection().await;
@@ -223,7 +223,7 @@ impl Repository<TranslationRecord> for VociMongoRepository {
                         Err(RepoDeleteError::NotFound)
                     }
                 }
-                Err(e) => Err(RepoDeleteError::Unknown),
+                Err(_) => Err(RepoDeleteError::Unknown),
             };
     }
 }

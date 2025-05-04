@@ -43,7 +43,7 @@ pub mod repo_double {
                 return Err(RepoCreateError::Unknown);
             }
 
-            let (id, word, lang, translations, translation_lang) = tr.flat();
+            let (_id, word, lang, translations, translation_lang) = tr.flat();
 
             let s = TranslationRecord::new(
                 Some(TRANSLATION_ID.to_string()),
