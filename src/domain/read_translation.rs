@@ -12,7 +12,7 @@ pub enum ReadError {
     #[error("Translation not found")]
     RecordNotFound,
     #[error("Unknown")]
-    Unknown(String),
+    Unknown,
 }
 
 pub async fn read_translation<T: Repository<TranslationRecord>>(
@@ -27,7 +27,7 @@ pub async fn read_translation<T: Repository<TranslationRecord>>(
 
     result.map_err(|e| match e {
         RepoReadError::NotFound => ReadError::RecordNotFound,
-        RepoReadError::Unknown(s) => ReadError::Unknown(s),
+        RepoReadError::Unknown => ReadError::Unknown,
     })
 }
 

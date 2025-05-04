@@ -19,7 +19,7 @@ pub enum RepoReadError {
     #[error("Not found")]
     NotFound,
     #[error("Unknown repo read error")]
-    Unknown(String),
+    Unknown,
 }
 
 #[derive(Error, Debug, PartialEq)]
