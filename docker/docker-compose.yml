@@ -11,4 +11,3 @@ services:
       MONGO_INITDB_DATABASE: translations
     volumes:
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
-      - ./../data/db:/data/db

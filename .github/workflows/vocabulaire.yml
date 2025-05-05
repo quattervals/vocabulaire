@@ -44,8 +44,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup test DB
+        run: |
+          docker compose -f docker/docker-compose.yml up -d --build --remove-orphans
+
       - name: Setup Rust
         uses: ./.github/actions/setup_rust
 
       - name: Run tests
         run: cargo test
+
+      - name: Tear down test DB
+        if: always()
+        run: |
+          docker compose -f docker/docker-compose.yml down
