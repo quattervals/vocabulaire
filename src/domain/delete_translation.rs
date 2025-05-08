@@ -11,7 +11,7 @@ pub enum DeleteError {
     WordError(#[from] TranslationRecordError),
     #[error("Read Error: {0}")]
     ReadError(#[from] RepoReadError),
-    #[error("Update Error:")]
+    #[error("Delete Error:")]
     DeleteError(#[from] RepoDeleteError),
 }
 

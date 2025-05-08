@@ -79,14 +79,11 @@ impl VociMongoRepository {
             .expect("Error while opening the connection to MongoDB")
     }
 
-    async fn get_collection(&self) -> Collection<VociMongo> {
+    pub async fn get_collection(&self) -> Collection<VociMongo> {
         let client = self.open_connection().await;
         client.database(&self.database).collection(&self.collection)
     }
 
-    // todo: needed to find a document
-    //fn compose_document_from_translationrecord(&self, tr: FindTranslationRecord) -> Result<Document, Error>
-    // {}
 }
 
 #[async_trait]
@@ -253,7 +250,7 @@ fn compose_read_by_word_document(word: &Word) -> Result<Document, Error> {
 mod tests {
     use crate::tests::test_utils::shared::{
         ADDITONAL_TRANSLATIONS, assert_on_translation_record, get_testing_persistence_config,
-        stub_translation_record,
+        stub_translation_record, setup_repo,
     };
     use serial_test::serial;
 
@@ -390,21 +387,21 @@ mod tests {
         );
     }
 
-    async fn setup_repo() -> VociMongoRepository {
-        let config = get_testing_persistence_config();
-        let repo: VociMongoRepository = Repository::<TranslationRecord>::new(&config).unwrap();
+    // async fn setup_repo() -> VociMongoRepository {
+    //     let config = get_testing_persistence_config();
+    //     let repo: VociMongoRepository = Repository::<TranslationRecord>::new(&config).unwrap();
 
-        delete_collection(config, &repo).await;
+    //     delete_collection(config, &repo).await;
 
-        repo
-    }
+    //     repo
+    // }
 
-    async fn delete_collection(config: PersistenceConfig, repo: &VociMongoRepository) {
-        let collection = repo.get_collection().await;
-        let coll: Collection<VociMongoRepository> = collection
-            .client()
-            .database(&config.database)
-            .collection(&config.schema_collection);
-        coll.delete_many(doc! {}).await.unwrap();
-    }
+    // async fn delete_collection(config: PersistenceConfig, repo: &VociMongoRepository) {
+    //     let collection = repo.get_collection().await;
+    //     let coll: Collection<VociMongoRepository> = collection
+    //         .client()
+    //         .database(&config.database)
+    //         .collection(&config.schema_collection);
+    //     coll.delete_many(doc! {}).await.unwrap();
+    // }
 }

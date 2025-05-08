@@ -73,9 +73,10 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
     result
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
-            CreateError::Unknown => ApiError::Unknown(e.to_string()),
-            CreateError::InvalidData(s) => ApiError::InvalidData(s.to_string()),
             CreateError::InvalidInput(m) => ApiError::InvalidData(m.to_string()),
+            CreateError::ReadError(e) => ApiError::NotFound(e.to_string()),
+            CreateError::CreateError(e) => ApiError::BadRequest(e.to_string()),
+            CreateError::Duplicate => ApiError::Conflict(e.to_string()),
         })?
 }
 
@@ -145,7 +146,9 @@ pub async fn update_translation<T: Repository<TranslationRecord>>(
 #[cfg(test)]
 mod tests {
     use actix_web::test::TestRequest;
-    use actix_web::{App, FromRequest, Handler, Responder, Route, test, web::Data};
+    use actix_web::{
+        App, FromRequest, Handler, Responder, Route, http::StatusCode, test, web::Data,
+    };
     use serial_test::serial;
 
     use super::*;
@@ -155,7 +158,7 @@ mod tests {
     #[serial]
     #[actix_web::test]
     async fn create_translation_ok_input_same_translation_returned() {
-        let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
+        let repo = setup_repo().await;
 
         let create_req = CreateTranslationRequest {
             id: None,
@@ -188,10 +191,96 @@ mod tests {
         assert_on_translation_response(&resp, &expected, false);
     }
 
+    #[should_panic]
     #[serial]
     #[actix_web::test]
-    async fn read_translation_by_word_good_input_http_translation_returned() {
-        let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
+    async fn create_translation_word_already_exists_panic() {
+        let repo = setup_repo().await;
+        let create_req = CreateTranslationRequest {
+            id: None,
+            word: WORD.to_string(),
+            lang: WORD_LANG,
+            translations: stub_translations(),
+            translation_lang: TRANSLATION_LANG,
+        };
+        let _response: TranslationResponse = execute(
+            &repo,
+            "/",
+            None,
+            web::post(),
+            TestRequest::post(),
+            create_translation::<VociMongoRepository>,
+            Some(create_req),
+        )
+        .await;
+
+        let doublet_request = CreateTranslationRequest {
+            id: None,
+            word: WORD.to_string(),
+            lang: WORD_LANG,
+            translations: stub_translations(),
+            translation_lang: Lang::fr,
+        };
+        let _: TranslationResponse = execute(
+            &repo,
+            "/",
+            None,
+            web::post(),
+            TestRequest::post(),
+            create_translation::<VociMongoRepository>,
+            Some(doublet_request),
+        )
+        .await;
+    }
+
+    #[serial]
+    #[actix_web::test]
+    async fn create_translation_word_already_exists_http_conflict() {
+        let repo = setup_repo().await;
+
+        let create_req = CreateTranslationRequest {
+            id: None,
+            word: WORD.to_string(),
+            lang: WORD_LANG,
+            translations: stub_translations(),
+            translation_lang: TRANSLATION_LANG,
+        };
+        let _response: TranslationResponse = execute(
+            &repo,
+            "/",
+            None,
+            web::post(),
+            TestRequest::post(),
+            create_translation::<VociMongoRepository>,
+            Some(create_req),
+        )
+        .await;
+
+        let doublet_request = CreateTranslationRequest {
+            id: None,
+            word: WORD.to_string(),
+            lang: WORD_LANG,
+            translations: stub_translations(),
+            translation_lang: Lang::fr,
+        };
+        let create_rep = execute_http(
+            &repo,
+            "/",
+            None,
+            web::post(),
+            TestRequest::post(),
+            create_translation::<VociMongoRepository>,
+            Some(doublet_request),
+        )
+        .await;
+
+        assert_eq!(create_rep.status(), StatusCode::CONFLICT);
+    }
+
+    #[serial]
+    #[actix_web::test]
+    async fn read_translation_by_word_good_input_translation_returned() {
+        let repo = setup_repo().await;
         let create_req = CreateTranslationRequest {
             id: None,
             word: WORD.to_string(),
@@ -241,7 +330,8 @@ mod tests {
     #[serial]
     #[actix_web::test]
     async fn delete_translation_ok_input_http_success() {
-        let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
+        let repo = setup_repo().await;
+
         let create_req = CreateTranslationRequest {
             id: None,
             word: WORD.to_string(),
@@ -281,7 +371,7 @@ mod tests {
     #[serial]
     #[actix_web::test]
     async fn delete_translation_bad_input_http_client_error() {
-        let repo = VociMongoRepository::new(&get_testing_persistence_config()).unwrap();
+        let repo = setup_repo().await;
         let del_req = RequestTranslationByWord {
             word: "".to_string(),
             lang: WORD_LANG,

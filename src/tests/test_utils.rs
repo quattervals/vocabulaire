@@ -2,14 +2,15 @@
 
 pub mod shared {
 
-    use actix_web::web::Data;
     use std::path::PathBuf;
+    use mongodb::Collection;
+    use mongodb::bson::doc;
 
     use crate::config::{Config, PersistenceConfig, parse_config};
     use crate::domain::voci::{Lang, TranslationRecord};
 
     use crate::driven::repository::Repository;
-    use crate::tests::voci_repo_double::repo_double::VociRepoDouble;
+    use crate::driven::repository::mongo_repository::VociMongoRepository;
 
     /// Constants
 
@@ -74,4 +75,21 @@ pub mod shared {
         parse_config(d)
     }
 
+    pub async fn setup_repo() -> VociMongoRepository {
+        let config = get_testing_persistence_config();
+        let repo: VociMongoRepository = Repository::<TranslationRecord>::new(&config).unwrap();
+
+        delete_collection(config, &repo).await;
+
+        repo
+    }
+
+    pub async fn delete_collection(config: PersistenceConfig, repo: &VociMongoRepository) {
+        let collection = repo.get_collection().await;
+        let coll: Collection<VociMongoRepository> = collection
+            .client()
+            .database(&config.database)
+            .collection(&config.schema_collection);
+        coll.delete_many(doc! {}).await.unwrap();
+    }
 }

@@ -29,8 +29,6 @@ pub enum UpdateError {
 /// Returns `UpdateError::WordError` if:
 /// * The word is empty or invalid
 /// * The language specification is invalid
-///
-///
 pub async fn update_translation<T: Repository<TranslationRecord>>(
     repository: web::Data<T>,
     word: &str,
