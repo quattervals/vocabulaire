@@ -16,7 +16,7 @@ pub enum RepoCreateError {
 }
 
 #[derive(Error, Debug, PartialEq)]
-pub enum RepoReadError {
+pub enum  RepoReadError {
     #[error("Not found")]
     NotFound,
     #[error("Unknown repo read error")]

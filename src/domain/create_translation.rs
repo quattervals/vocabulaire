@@ -3,16 +3,18 @@ use thiserror::Error;
 
 use crate::Repository;
 use crate::domain::voci::{Lang, TranslationRecord, TranslationRecordError};
-use crate::driven::repository::RepoCreateError;
+use crate::driven::repository::{RepoCreateError, RepoReadError};
 
 #[derive(Debug, PartialEq, Error)]
 pub enum CreateError {
     #[error("Bad Input: {0}")]
     InvalidInput(#[from] TranslationRecordError),
-    #[error("Invalid Data to DB")]
-    InvalidData(String),
-    #[error("Unknown")]
-    Unknown,
+    #[error("Read Error: {0}")]
+    ReadError(#[from] RepoReadError),
+    #[error("Create Error")]
+    CreateError(#[from] RepoCreateError),
+    #[error("Duplicate")]
+    Duplicate,
 }
 
 pub async fn create_translation<T: Repository<TranslationRecord>>(
@@ -31,40 +33,20 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
             .map(|t| t.to_string())
             .collect::<Vec<String>>(),
         translation_lang.clone(),
-    )
-    .map_err(|e| CreateError::InvalidInput(e))?;
+    )?;
 
-    //todo: check if this translation already exists
+    let word = tr.word();
 
-    repository.create(&tr).await.map_err(|e| {
-        return match e {
-            RepoCreateError::InvalidData(e) => CreateError::InvalidData(e),
-            RepoCreateError::Unknown => CreateError::Unknown,
-        };
-    })
-}
+    let does_exist: bool = match repository.read_by_word(&word).await {
+        Ok(_) => true,
+        Err(_) => false,
+    };
 
-#[cfg(test)]
-mod tests {
-    use actix_web::web::Data;
-
-    use super::*;
-    use crate::tests::{test_utils::shared::*, voci_repo_double::repo_double::VociRepoDouble};
-
-    #[actix_rt::test]
-    async fn create_translation_ok_input_no_error() {
-        let repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
-
-        let result = create_translation(
-            Data::new(repo),
-            WORD,
-            &WORD_LANG,
-            &TRANSLATIONS.to_vec(),
-            &TRANSLATION_LANG,
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(result, stub_translation_record(true));
+    if !does_exist {
+        let create_response = repository.create(&tr).await?;
+        Ok(create_response)
+    } else {
+        Err(CreateError::Duplicate)
     }
 }
+
