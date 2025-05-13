@@ -21,6 +21,8 @@ pub enum TranslationRecordError {
     EmptyWordInTranslation,
     #[error("Translation language mismatch")]
     TranslationLanguageMismatch,
+    #[error("Update with same items")]
+    UpdateWithSameItems,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -140,19 +142,24 @@ impl TranslationRecord {
         translations: Vec<String>,
         lang: Lang,
     ) -> Result<(), TranslationRecordError> {
-        if &self.translations.lang == &lang {
-            let mut seen: HashSet<String> = self.translations.words.iter().cloned().collect();
-
-            for t in translations {
-                if !t.is_empty() && !seen.contains(&t) {
-                    seen.insert(t.clone());
-                    self.translations.words.push(t);
-                }
-            }
-            Ok(())
-        } else {
-            Err(TranslationRecordError::TranslationLanguageMismatch)
+        if &self.translations.lang != &lang {
+            return Err(TranslationRecordError::TranslationLanguageMismatch);
         }
+
+        if vectors_are_equal(&self.translations.words, &translations) {
+            return Err(TranslationRecordError::UpdateWithSameItems);
+        }
+
+        let mut seen: HashSet<String> = self.translations.words.iter().cloned().collect();
+
+        for t in translations {
+            if !t.is_empty() && !seen.contains(&t) {
+                seen.insert(t.clone());
+                self.translations.words.push(t);
+            }
+        }
+
+        Ok(())
     }
 
     pub fn flat(&self) -> (&Option<String>, &String, &Lang, &Vec<String>, &Lang) {
@@ -161,6 +168,20 @@ impl TranslationRecord {
         let trans = &self.translations.value();
         (id, word.0, word.1, trans.0, trans.1)
     }
+}
+
+fn vectors_are_equal<T: Ord + Clone>(vec1: &[T], vec2: &[T]) -> bool {
+    if vec1.len() != vec2.len() {
+        return false;
+    }
+
+    let mut sorted_vec1 = vec1.to_vec();
+    let mut sorted_vec2 = vec2.to_vec();
+
+    sorted_vec1.sort();
+    sorted_vec2.sort();
+
+    sorted_vec1 == sorted_vec2
 }
 
 #[cfg(test)]
@@ -290,7 +311,10 @@ mod tests {
         let result = tr.update(extra_translations, Lang::fr);
 
         assert_eq!(tr.flat().3, &expected);
-        assert_eq!(result.unwrap_err(), TranslationRecordError::TranslationLanguageMismatch);
+        assert_eq!(
+            result.unwrap_err(),
+            TranslationRecordError::TranslationLanguageMismatch
+        );
     }
 
     #[test]
@@ -314,5 +338,19 @@ mod tests {
 
         assert_eq!(tr.flat().3, &expected);
     }
-    //todo: test Some("".to_string()) should lead to None in TranslationId
+
+    #[test]
+    fn translation_record_update_with_existing_words_no_update_error() {
+        let mut tr = stub_translation_record(true);
+        let extra_translations = vec![TRANSLATIONS[1].to_string(), TRANSLATIONS[0].to_string()];
+        let expected = tr.flat().3.clone();
+
+        let result = tr.update(extra_translations, Lang::de);
+
+        assert_eq!(tr.flat().3, &expected);
+        assert_eq!(
+            result.unwrap_err(),
+            TranslationRecordError::UpdateWithSameItems
+        );
+    }
 }
