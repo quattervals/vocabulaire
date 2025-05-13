@@ -76,7 +76,7 @@ pub mod repo_double {
             Ok(tr.clone())
         }
 
-        async fn delete(&self, id: &TranslationId) -> Result<(), RepoDeleteError> {
+        async fn delete(&self, _id: &TranslationId) -> Result<(), RepoDeleteError> {
             if self.has_error.0.take() {
                 return Err(RepoDeleteError::Unknown);
             }

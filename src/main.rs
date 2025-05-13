@@ -61,8 +61,6 @@ fn routes(cfg: &mut web::ServiceConfig) {
                                 .route(web::put().to(rest_handler::vocis::update_translation::<VociMongoRepository>))
                         ).service(
                         web::resource("translations/{id}")
-                            // .route(web::get().to(rest_handler::sandwiches::get_by_id))
-                            // .route(web::delete().to(rest_handler::sandwiches::delete_one_sandwich))
                     )
                 )
         );
