@@ -46,7 +46,7 @@ pub async fn update_translation<T: Repository<TranslationRecord>>(
             .map(|t| t.to_string())
             .collect(),
         extra_translation_lang.clone(),
-    );
+    )?;
 
     let updated_tr = repository.update(&tr_to_be_updated).await?;
 

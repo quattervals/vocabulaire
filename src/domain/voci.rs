@@ -19,6 +19,8 @@ pub enum TranslationRecordError {
     EmptyTranslation,
     #[error("One of the Words in Translations is empty")]
     EmptyWordInTranslation,
+    #[error("Translation language mismatch")]
+    TranslationLanguageMismatch,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -133,7 +135,11 @@ impl TranslationRecord {
         &self.word
     }
 
-    pub fn update(&mut self, translations: Vec<String>, lang: Lang) {
+    pub fn update(
+        &mut self,
+        translations: Vec<String>,
+        lang: Lang,
+    ) -> Result<(), TranslationRecordError> {
         if &self.translations.lang == &lang {
             let mut seen: HashSet<String> = self.translations.words.iter().cloned().collect();
 
@@ -143,6 +149,9 @@ impl TranslationRecord {
                     self.translations.words.push(t);
                 }
             }
+            Ok(())
+        } else {
+            Err(TranslationRecordError::TranslationLanguageMismatch)
         }
     }
 
@@ -153,7 +162,6 @@ impl TranslationRecord {
         (id, word.0, word.1, trans.0, trans.1)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -268,20 +276,21 @@ mod tests {
         let mut expected = tr.flat().3.clone();
         expected.append(&mut extra_translations.clone());
 
-        tr.update(extra_translations, Lang::de);
+        let _ = tr.update(extra_translations, Lang::de);
 
         assert_eq!(tr.flat().3, &expected);
     }
 
     #[test]
-    fn translation_record_update_different_language_no_update() {
+    fn translation_record_update_different_language_no_update_and_error() {
         let mut tr = stub_translation_record(true);
         let extra_translations = ADDITONAL_TRANSLATIONS.map(|r| r.to_string()).to_vec();
         let expected = tr.flat().3.clone();
 
-        tr.update(extra_translations, Lang::fr);
+        let result = tr.update(extra_translations, Lang::fr);
 
         assert_eq!(tr.flat().3, &expected);
+        assert_eq!(result.unwrap_err(), TranslationRecordError::TranslationLanguageMismatch);
     }
 
     #[test]
@@ -290,7 +299,7 @@ mod tests {
         let extra_translations = vec![TRANSLATIONS[0].to_string()];
         let expected = tr.flat().3.clone();
 
-        tr.update(extra_translations, Lang::de);
+        let _ = tr.update(extra_translations, Lang::de);
 
         assert_eq!(tr.flat().3, &expected);
     }
@@ -301,7 +310,7 @@ mod tests {
         let extra_translations = vec![TRANSLATIONS[0].to_string(), TRANSLATIONS[0].to_string()];
         let expected = tr.flat().3.clone();
 
-        tr.update(extra_translations, Lang::de);
+        let _ = tr.update(extra_translations, Lang::de);
 
         assert_eq!(tr.flat().3, &expected);
     }
