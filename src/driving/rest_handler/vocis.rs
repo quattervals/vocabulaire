@@ -87,20 +87,6 @@ pub struct RequestTranslationByWord {
     pub lang: Lang,
 }
 
-pub async fn delete_translation<T: Repository<TranslationRecord>>(
-    repository: web::Data<T>,
-    request: Json<RequestTranslationByWord>,
-) -> Result<HttpResponse, ApiError> {
-    validate(&request)?;
-
-    match domain::delete_translation::delete_translation(repository, &request.word, &request.lang)
-        .await
-    {
-        Ok(_) => Ok(HttpResponse::Ok().finish()),
-        Err(e) => Err(ApiError::InvalidData(e.to_string())),
-    }
-}
-
 pub async fn read_translation<T: Repository<TranslationRecord>>(
     repository: web::Data<T>,
     request: Json<RequestTranslationByWord>,
@@ -141,6 +127,20 @@ pub async fn update_translation<T: Repository<TranslationRecord>>(
             UpdateError::ReadError(s) => ApiError::NotFound(s.to_string()),
             UpdateError::UpdateError(s) => ApiError::NotFound(s.to_string()),
         })?
+}
+
+pub async fn delete_translation<T: Repository<TranslationRecord>>(
+    repository: web::Data<T>,
+    request: Json<RequestTranslationByWord>,
+) -> Result<HttpResponse, ApiError> {
+    validate(&request)?;
+
+    match domain::delete_translation::delete_translation(repository, &request.word, &request.lang)
+        .await
+    {
+        Ok(_) => Ok(HttpResponse::Ok().finish()),
+        Err(e) => Err(ApiError::InvalidData(e.to_string())),
+    }
 }
 
 #[cfg(test)]

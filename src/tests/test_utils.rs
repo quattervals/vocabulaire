@@ -13,7 +13,6 @@ pub mod shared {
     use crate::driven::repository::mongo_repository::VociMongoRepository;
 
     /// Constants
-
     pub const TRANSLATION_ID: &str = "123";
     pub const _EMPTY_TRANSLATION_ID: &str = "";
     pub const WORD: &str = "chien";

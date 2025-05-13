@@ -2,8 +2,8 @@ use std::str::FromStr;
 
 use async_trait::async_trait;
 use mongodb::bson::oid::ObjectId;
-use mongodb::bson::{Document, doc};
-use mongodb::error::Error;
+use mongodb::bson::doc;
+
 use mongodb::{Client, Collection, bson};
 use serde::{Deserialize, Serialize};
 
@@ -25,7 +25,6 @@ impl From<Lang> for bson::Bson {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VociMongo {
-    // todo: is this a good name? should include something like TranslationRecord + Mongo
     _id: ObjectId,
     word: String,
     lang: Lang,
@@ -104,7 +103,6 @@ impl Repository<TranslationRecord> for VociMongoRepository {
         })
     }
 
-    //todo: pass TranslationRecord by Reference (From trait is by value)
     async fn create(&self, tr: &TranslationRecord) -> Result<TranslationRecord, RepoCreateError> {
         let voci_mongo = VociMongo::from(tr.clone());
         let translation_collection = self.get_collection().await;
@@ -225,7 +223,6 @@ impl Repository<TranslationRecord> for VociMongoRepository {
     }
 }
 
-/// create connection uri
 fn create_connection_uri(config: &PersistenceConfig) -> String {
     format!(
         "mongodb://{}:{}@{}/{}",
@@ -237,13 +234,6 @@ fn create_connection_uri(config: &PersistenceConfig) -> String {
         },
         config.auth_db
     )
-}
-
-// todo: do we need this foo?
-fn compose_read_by_word_document(word: &Word) -> Result<Document, Error> {
-    let word = word.value();
-
-    Ok(doc! {"word": word.0, "lang": word.1})
 }
 
 #[cfg(test)]
