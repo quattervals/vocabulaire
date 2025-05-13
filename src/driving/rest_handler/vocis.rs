@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use crate::domain::create_translation::CreateError;
+use crate::domain::delete_translation::DeleteError;
 use crate::domain::read_translation::ReadError;
 use crate::domain::update_translation::UpdateError;
 use crate::domain::voci::{Lang, TranslationRecord};
@@ -73,9 +74,9 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
     result
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
-            CreateError::InvalidInput(m) => ApiError::InvalidData(m.to_string()),
-            CreateError::ReadError(e) => ApiError::NotFound(e.to_string()),
-            CreateError::CreateError(e) => ApiError::BadRequest(e.to_string()),
+            CreateError::InvalidInput(s) => ApiError::InvalidInput(s.to_string()),
+            CreateError::ReadError(s) => ApiError::NotFound(s.to_string()),
+            CreateError::CreateError(s) => ApiError::BadRequest(s.to_string()),
             CreateError::Duplicate => ApiError::Conflict(e.to_string()),
         })?
 }
@@ -99,7 +100,7 @@ pub async fn read_translation<T: Repository<TranslationRecord>>(
     result
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
-            ReadError::QueryWord(e) => ApiError::InvalidData(e.to_string()),
+            ReadError::QueryWord(s) => ApiError::InvalidInput(s.to_string()),
             ReadError::RecordNotFound => ApiError::NotFound(e.to_string()),
             ReadError::Unknown => ApiError::Unknown(e.to_string()),
         })?
@@ -123,7 +124,7 @@ pub async fn update_translation<T: Repository<TranslationRecord>>(
     result
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
-            UpdateError::WordError(s) => ApiError::InvalidData(s.to_string()),
+            UpdateError::WordError(s) => ApiError::InvalidInput(s.to_string()),
             UpdateError::ReadError(s) => ApiError::NotFound(s.to_string()),
             UpdateError::UpdateError(s) => ApiError::NotFound(s.to_string()),
         })?
@@ -135,12 +136,17 @@ pub async fn delete_translation<T: Repository<TranslationRecord>>(
 ) -> Result<HttpResponse, ApiError> {
     validate(&request)?;
 
-    match domain::delete_translation::delete_translation(repository, &request.word, &request.lang)
-        .await
-    {
-        Ok(_) => Ok(HttpResponse::Ok().finish()),
-        Err(e) => Err(ApiError::InvalidData(e.to_string())),
-    }
+    let result =
+        domain::delete_translation::delete_translation(repository, &request.word, &request.lang)
+            .await;
+
+    result
+        .map(|_| Ok(HttpResponse::Ok().finish()))
+        .map_err(|e| match e {
+            DeleteError::WordError(s) => ApiError::InvalidInput(s.to_string()),
+            DeleteError::ReadError(s) => ApiError::InvalidInput(s.to_string()),
+            DeleteError::DeleteError(s) => ApiError::Unknown(s.to_string()),
+        })?
 }
 
 #[cfg(test)]

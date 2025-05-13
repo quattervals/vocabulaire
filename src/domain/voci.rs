@@ -19,8 +19,6 @@ pub enum TranslationRecordError {
     EmptyTranslation,
     #[error("One of the Words in Translations is empty")]
     EmptyWordInTranslation,
-    #[error("Unknown Error: {0}")]
-    Unknown(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

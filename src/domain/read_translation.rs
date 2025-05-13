@@ -22,8 +22,7 @@ pub async fn read_translation<T: Repository<TranslationRecord>>(
 ) -> Result<TranslationRecord, ReadError> {
     let word = Word::new(word.to_string(), lang.clone())?;
 
-    let result: Result<TranslationRecord, crate::driven::repository::RepoReadError> =
-        repository.read_by_word(&word).await;
+    let result = repository.read_by_word(&word).await;
 
     result.map_err(|e| match e {
         RepoReadError::NotFound => ReadError::RecordNotFound,
@@ -37,7 +36,6 @@ mod tests {
 
     use super::*;
     use crate::tests::{test_utils::shared::*, voci_repo_double::repo_double::VociRepoDouble};
-
 
     #[actix_rt::test]
     async fn read_well_formatted_word() {

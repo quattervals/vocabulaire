@@ -1,45 +1,31 @@
-use std::fmt;
-use std::fmt::Display;
-
 use actix_web::{HttpResponse, error::ResponseError, http::StatusCode};
-// use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Error)]
 pub enum ApiError {
+    #[error("Request cannot be handled")]
     BadRequest(String),
-    InternalServerError(String),
+    #[error("Item not found")]
     NotFound(String),
-    InvalidData(String),
-    Unknown(String),
+    #[error("Input Invalid")]
+    InvalidInput(String),
+    #[error("Conflicting Item")]
     Conflict(String),
+    #[error("Validation Error")]
     ValidationError(Vec<String>),
-}
-
-
-impl Display for ApiError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ApiError::ValidationError(mex_vec) => mex_vec.iter().fold(Ok(()), |result, err| {
-                result.and_then(|_| writeln!(f, "{}, ", err))
-            }),
-            _ => write!(f, "{}", self),
-        }
-    }
+    #[error("Unknown")]
+    Unknown(String),
 }
 
 /// Automatically convert ApiErrors to external ResponseError
 impl ResponseError for ApiError {
     fn error_response(&self) -> HttpResponse {
         match self {
-            ApiError::BadRequest(error) | ApiError::InvalidData(error) => {
-                HttpResponse::BadRequest().json(error)
-            }
-            ApiError::NotFound(message) => HttpResponse::NotFound().json(message),
-            ApiError::ValidationError(errors) => {
-                HttpResponse::UnprocessableEntity().json(&errors.to_vec())
-            }
-            ApiError::InternalServerError(error) => HttpResponse::Unauthorized().json(error),
-            ApiError::Conflict(error) => HttpResponse::Conflict().json(error),
+            ApiError::BadRequest(s) => HttpResponse::BadRequest().json(s),
+            ApiError::NotFound(s) => HttpResponse::NotFound().json(s),
+            ApiError::InvalidInput(s) => HttpResponse::BadRequest().json(s),
+            ApiError::Conflict(s) => HttpResponse::Conflict().json(s),
+            ApiError::ValidationError(s) => HttpResponse::UnprocessableEntity().json(&s.to_vec()),
             ApiError::Unknown(_) => HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR),
         }
     }

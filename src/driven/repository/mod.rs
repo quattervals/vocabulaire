@@ -8,17 +8,15 @@ pub mod mongo_repository;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum RepoCreateError {
-    #[error("Invalid Data")]
-    InvalidData(String),
-    #[error("Unknown repo create error")]
+    #[error("Unknown")]
     Unknown,
 }
 
 #[derive(Error, Debug, PartialEq)]
-pub enum  RepoReadError {
+pub enum RepoReadError {
     #[error("Not found")]
     NotFound,
-    #[error("Unknown repo read error")]
+    #[error("Unknown")]
     Unknown,
 }
 
@@ -38,13 +36,12 @@ pub enum RepoDeleteError {
     BadId,
     #[error("Not Found")]
     NotFound,
-    #[error("Unknown repo delete error")]
+    #[error("Unknown")]
     Unknown,
 }
 
 #[async_trait]
-pub trait Repository<T>
-{
+pub trait Repository<T> {
     /// Creation of a repository
     fn new(config: &PersistenceConfig) -> Result<Self, String>
     where
