@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use thiserror::Error;
 
 use crate::config::PersistenceConfig;
-use crate::domain::Entity;
 use crate::domain::voci::{TranslationId, Word};
 
 pub mod mongo_repository;
@@ -43,23 +42,8 @@ pub enum RepoDeleteError {
     Unknown,
 }
 
-// /// Structure to specify agreed format for passing the lookup value through the port.
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// pub struct FindTranslationRecord {
-//     pub word: Word,
-// }
-
-// /// Structure to specify agreed format for passing the lookup value through the port.
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// pub enum FindTranslationRecordx{
-//     ByWord(Word),
-//     ById(TranslationId),
-// }
-
 #[async_trait]
 pub trait Repository<T>
-where
-    T: Entity,
 {
     /// Creation of a repository
     fn new(config: &PersistenceConfig) -> Result<Self, String>

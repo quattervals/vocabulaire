@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use thiserror::Error;
 
-use crate::domain::Entity;
-
 /// Represents available languages in the system
 /// Languages codes according to https://de.wikipedia.org/wiki/Liste_der_ISO-639-2-Codes
 #[allow(non_camel_case_types)]
@@ -158,7 +156,6 @@ impl TranslationRecord {
     }
 }
 
-impl Entity for TranslationRecord {}
 
 #[cfg(test)]
 mod tests {
