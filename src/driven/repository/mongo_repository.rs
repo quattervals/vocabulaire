@@ -313,8 +313,8 @@ mod tests {
         let mut tr = repo.create(&stub_translation_record(false)).await.unwrap();
         let extra_translations = ADDITONAL_TRANSLATIONS.map(|r| r.to_string()).to_vec();
         let mut expected_tr = tr.clone();
-        expected_tr.update(extra_translations.clone(), Lang::de);
-        tr.update(extra_translations, Lang::de);
+        let _ = expected_tr.update(extra_translations.clone(), Lang::de);
+        let _ = tr.update(extra_translations, Lang::de);
 
         let updated_tr = repo.update(&tr).await.unwrap();
 
