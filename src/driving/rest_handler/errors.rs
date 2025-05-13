@@ -1,31 +1,24 @@
-use std::fmt;
-use std::fmt::Display;
-
+use thiserror::Error;
 use actix_web::{HttpResponse, error::ResponseError, http::StatusCode};
-// use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Error)]
 pub enum ApiError {
+    #[error("nix")]
     BadRequest(String),
+    #[error("nix")]
     InternalServerError(String),
+    #[error("nix")]
     NotFound(String),
+    #[error("nix")]
     InvalidData(String),
+    #[error("nix")]
     Unknown(String),
+    #[error("nix")]
     Conflict(String),
+    #[error("nix")]
     ValidationError(Vec<String>),
 }
 
-
-impl Display for ApiError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ApiError::ValidationError(mex_vec) => mex_vec.iter().fold(Ok(()), |result, err| {
-                result.and_then(|_| writeln!(f, "{}, ", err))
-            }),
-            _ => write!(f, "{}", self),
-        }
-    }
-}
 
 /// Automatically convert ApiErrors to external ResponseError
 impl ResponseError for ApiError {
