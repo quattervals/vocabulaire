@@ -3,15 +3,14 @@ use std::str::FromStr;
 use async_trait::async_trait;
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
-
 use mongodb::{Client, Collection, bson};
 use serde::{Deserialize, Serialize};
 
 use crate::config::PersistenceConfig;
-use crate::domain::voci::{Lang, TranslationId, TranslationRecord, TranslationRecordError, Word};
-use crate::driven::repository::{
-    RepoCreateError, RepoDeleteError, RepoReadError, RepoUpdateError, Repository,
+use crate::domain::ports::{
+    RepoCreateError, RepoDeleteError, RepoReadError, RepoUpdateError, TranslationRepository,
 };
+use crate::domain::voci::{Lang, TranslationId, TranslationRecord, TranslationRecordError, Word};
 
 // Implement the `From<Lang> for Bson` trait
 impl From<Lang> for bson::Bson {
@@ -85,7 +84,7 @@ impl VociMongoRepository {
 }
 
 #[async_trait]
-impl Repository<TranslationRecord> for VociMongoRepository {
+impl TranslationRepository for VociMongoRepository {
     fn new(config: &PersistenceConfig) -> Result<Self, String>
     where
         Self: Sized,
@@ -172,7 +171,7 @@ impl Repository<TranslationRecord> for VociMongoRepository {
             )
             .await;
 
-        return match res {
+        match res {
             Ok(r) => {
                 if r.matched_count > 0 {
                     Ok(tr.clone())
@@ -181,7 +180,7 @@ impl Repository<TranslationRecord> for VociMongoRepository {
                 }
             }
             Err(_) => Err(RepoUpdateError::Unknown),
-        };
+        }
     }
 
     async fn delete(&self, id: &TranslationId) -> Result<(), RepoDeleteError> {
@@ -202,7 +201,7 @@ impl Repository<TranslationRecord> for VociMongoRepository {
             })
             .await;
 
-        return match res {
+        match res {
             Ok(r) => {
                 if r.deleted_count > 0 {
                     Ok(())
@@ -211,7 +210,7 @@ impl Repository<TranslationRecord> for VociMongoRepository {
                 }
             }
             Err(_) => Err(RepoDeleteError::Unknown),
-        };
+        }
     }
 }
 
@@ -254,8 +253,7 @@ mod tests {
     fn new_repo_bad_config_error() {
         let mut config = get_testing_persistence_config();
         config.host = "".to_string();
-        let result: Result<VociMongoRepository, String> =
-            Repository::<TranslationRecord>::new(&config);
+        let result = VociMongoRepository::new(&config);
 
         assert!(result.is_err());
     }
