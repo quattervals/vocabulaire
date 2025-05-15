@@ -8,11 +8,11 @@ use crate::driven::repository::{RepoReadError, RepoUpdateError};
 #[derive(Debug, PartialEq, Error)]
 pub enum UpdateError {
     #[error("Bad Input: {0}")]
-    WordError(#[from] TranslationRecordError),
+    Word(#[from] TranslationRecordError),
     #[error("Read Error: {0}")]
-    ReadError(#[from] RepoReadError),
+    Read(#[from] RepoReadError),
     #[error("Update Error:")]
-    UpdateError(#[from] RepoUpdateError),
+    Update(#[from] RepoUpdateError),
 }
 
 /// Updates a translation record for a given word and language.
@@ -41,10 +41,7 @@ pub async fn update_translation<T: Repository<TranslationRecord>>(
     let mut tr_to_be_updated = repository.read_by_word(&word).await?;
 
     tr_to_be_updated.update(
-        extra_translations
-            .into_iter()
-            .map(|t| t.to_string())
-            .collect(),
+        extra_translations.iter().map(|t| t.to_string()).collect(),
         extra_translation_lang.clone(),
     )?;
 
@@ -66,7 +63,7 @@ mod tests {
 
         let updated_tr = update_translation(
             Data::new(repo),
-            &WORD,
+            WORD,
             &WORD_LANG,
             &[].to_vec(),
             &TRANSLATION_LANG,
@@ -77,7 +74,7 @@ mod tests {
         let (_, _, _, actual_translations, _) = updated_translation.flat();
         assert_on_translations(
             actual_translations,
-            &TRANSLATIONS.map(|t| t.to_string()).to_vec(),
+            TRANSLATIONS.map(|t| t.to_string()).as_ref(),
         );
     }
 
@@ -90,7 +87,7 @@ mod tests {
 
         let updated_tr = update_translation(
             Data::new(repo),
-            &WORD,
+            WORD,
             &WORD_LANG,
             &ADDITONAL_TRANSLATIONS.to_vec(),
             &TRANSLATION_LANG,

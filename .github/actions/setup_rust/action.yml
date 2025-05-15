@@ -11,7 +11,7 @@ runs:
 
     - name: Install Rust Tools
       shell: bash
-      run: rustup component add rustfmt
+      run: rustup component add rustfmt clippy
 
     - name: Cache cargo registry
       uses: actions/cache@v4

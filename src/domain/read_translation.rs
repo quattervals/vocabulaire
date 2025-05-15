@@ -52,7 +52,7 @@ mod tests {
 
         let read_trans = read_translation(Data::new(repo), "", &WORD_LANG).await;
 
-        assert_eq!(read_trans.is_err(), true);
+        assert!(read_trans.is_err());
         assert_eq!(
             read_trans.unwrap_err(),
             ReadError::QueryWord(TranslationRecordError::EmptyWord)

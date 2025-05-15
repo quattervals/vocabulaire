@@ -1,5 +1,4 @@
 #[cfg(test)]
-
 pub mod shared {
 
     use mongodb::Collection;
@@ -40,7 +39,7 @@ pub mod shared {
         .unwrap()
     }
 
-    pub fn assert_on_translations(actual: &Vec<String>, expected: &Vec<String>) {
+    pub fn assert_on_translations(actual: &[String], expected: &[String]) {
         assert_eq!(actual.len(), expected.len());
         for (i, item) in expected.iter().enumerate() {
             assert_eq!(&actual[i], item);

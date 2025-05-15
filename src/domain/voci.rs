@@ -99,7 +99,7 @@ impl Translations {
         &self.words
     }
     fn value(&self) -> (&Vec<String>, &Lang) {
-        (&self.translations(), &self.lang)
+        (self.translations(), &self.lang)
     }
 }
 
@@ -123,9 +123,9 @@ impl TranslationRecord {
         let translations = Translations::new(translations, translation_lang)?;
 
         Ok(TranslationRecord {
-            id: id,
-            word: word,
-            translations: translations,
+            id,
+            word,
+            translations,
         })
     }
 
@@ -142,7 +142,7 @@ impl TranslationRecord {
         translations: Vec<String>,
         lang: Lang,
     ) -> Result<(), TranslationRecordError> {
-        if &self.translations.lang != &lang {
+        if self.translations.lang != lang {
             return Err(TranslationRecordError::TranslationLanguageMismatch);
         }
 
@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn word_new_bad_input_error() {
         let err_word = Word::new("".to_string(), Lang::fr);
-        assert_eq!(err_word.is_err(), true);
+        assert!(err_word.is_err());
         assert_eq!(err_word.unwrap_err(), TranslationRecordError::EmptyWord);
     }
 
@@ -210,7 +210,7 @@ mod tests {
         let words = vec!["hund".to_string(), "köter".to_string()];
 
         let translations = Translations::new(words.clone(), Lang::de);
-        for (i, translation) in translations.unwrap().translations().into_iter().enumerate() {
+        for (i, translation) in translations.unwrap().translations().iter().enumerate() {
             assert_eq!(*translation, words[i]);
         }
     }
@@ -220,7 +220,7 @@ mod tests {
         let err_words = vec!["".to_string(), "köter".to_string()];
 
         let err_translations = Translations::new(err_words.clone(), Lang::de);
-        assert_eq!(err_translations.is_err(), true);
+        assert!(err_translations.is_err());
         assert_eq!(
             err_translations.unwrap_err(),
             TranslationRecordError::EmptyWordInTranslation
@@ -232,7 +232,7 @@ mod tests {
         let err_words = vec![];
 
         let err_translations = Translations::new(err_words.clone(), Lang::de);
-        assert_eq!(err_translations.is_err(), true);
+        assert!(err_translations.is_err());
         assert_eq!(
             err_translations.unwrap_err(),
             TranslationRecordError::EmptyTranslation
@@ -283,7 +283,7 @@ mod tests {
             translation_lang,
         );
 
-        assert_eq!(chien.is_err(), true);
+        assert!(chien.is_err());
         assert_eq!(
             chien.unwrap_err(),
             TranslationRecordError::EmptyWordInTranslation

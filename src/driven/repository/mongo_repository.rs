@@ -98,7 +98,7 @@ impl Repository<TranslationRecord> for VociMongoRepository {
         Ok(VociMongoRepository {
             database: config.database,
             collection: config.schema_collection,
-            conn_uri: conn_uri,
+            conn_uri,
         })
     }
 
@@ -144,11 +144,7 @@ impl Repository<TranslationRecord> for VociMongoRepository {
             }
         };
 
-        found
-            .try_into()
-            .map_err(|e: TranslationRecordError| match e {
-                _ => RepoReadError::Unknown,
-            })
+        found.try_into().map_err(|_| RepoReadError::Unknown)
     }
 
     async fn update(&self, tr: &TranslationRecord) -> Result<TranslationRecord, RepoUpdateError> {
@@ -261,7 +257,7 @@ mod tests {
         let result: Result<VociMongoRepository, String> =
             Repository::<TranslationRecord>::new(&config);
 
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
     }
 
     #[serial]
@@ -298,7 +294,7 @@ mod tests {
         let non_existing_word = Word::new("nix".to_string(), Lang::de).unwrap();
         let result = repo.read_by_word(&non_existing_word).await;
 
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
         assert_eq!(result.unwrap_err(), RepoReadError::NotFound);
     }
 
@@ -322,9 +318,9 @@ mod tests {
     async fn update_without_id_record_return_error() {
         let repo = setup_repo().await;
         let tr = &stub_translation_record(false);
-        let _ = repo.create(&tr).await.unwrap();
+        let _ = repo.create(tr).await.unwrap();
 
-        let updated_tr = repo.update(&tr).await;
+        let updated_tr = repo.update(tr).await;
 
         assert_eq!(updated_tr.unwrap_err(), RepoUpdateError::BadId);
     }
@@ -334,11 +330,11 @@ mod tests {
     async fn delete_existing_id_ok() {
         let repo = setup_repo().await;
         let tr = &stub_translation_record(false);
-        let created_tr = repo.create(&tr).await.unwrap();
+        let created_tr = repo.create(tr).await.unwrap();
 
         let delete_id = created_tr.id();
 
-        let del_res = repo.delete(&delete_id).await;
+        let del_res = repo.delete(delete_id).await;
 
         assert_eq!(del_res, Ok(()));
     }
@@ -348,7 +344,7 @@ mod tests {
     async fn delete_non_existing_id_error() {
         let repo = setup_repo().await;
         let tr = &stub_translation_record(false);
-        let _ = repo.create(&tr).await.unwrap();
+        let _ = repo.create(tr).await.unwrap();
 
         let delete_id = TranslationId::from("6817c21bf99716ff3f9968eb".to_string());
 
@@ -363,7 +359,7 @@ mod tests {
     async fn delete_none_id_error() {
         let repo = setup_repo().await;
         let tr = &stub_translation_record(false);
-        let _ = repo.create(&tr).await.unwrap();
+        let _ = repo.create(tr).await.unwrap();
 
         let delete_id = TranslationId::from("".to_string());
 
