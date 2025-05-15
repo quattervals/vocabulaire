@@ -49,4 +49,3 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
         Err(CreateError::Duplicate)
     }
 }
-
