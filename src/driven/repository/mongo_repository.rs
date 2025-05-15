@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use async_trait::async_trait;
-use mongodb::bson::oid::ObjectId;
 use mongodb::bson::doc;
+use mongodb::bson::oid::ObjectId;
 
 use mongodb::{Client, Collection, bson};
 use serde::{Deserialize, Serialize};
@@ -82,7 +82,6 @@ impl VociMongoRepository {
         let client = self.open_connection().await;
         client.database(&self.database).collection(&self.collection)
     }
-
 }
 
 #[async_trait]
@@ -191,7 +190,6 @@ impl Repository<TranslationRecord> for VociMongoRepository {
 
     async fn delete(&self, id: &TranslationId) -> Result<(), RepoDeleteError> {
         let oid = match id.value() {
-
             Some(v) => v,
             None => return Err(RepoDeleteError::BadId),
         };
@@ -203,23 +201,21 @@ impl Repository<TranslationRecord> for VociMongoRepository {
         let collection = self.get_collection().await;
 
         let res = collection
-            .delete_one(
-                doc! {
-                    "_id": object_id
-                }
-            )
+            .delete_one(doc! {
+                "_id": object_id
+            })
             .await;
 
-            return match res {
-                Ok(r) => {
-                    if r.deleted_count > 0 {
-                        Ok(())
-                    } else {
-                        Err(RepoDeleteError::NotFound)
-                    }
+        return match res {
+            Ok(r) => {
+                if r.deleted_count > 0 {
+                    Ok(())
+                } else {
+                    Err(RepoDeleteError::NotFound)
                 }
-                Err(_) => Err(RepoDeleteError::Unknown),
-            };
+            }
+            Err(_) => Err(RepoDeleteError::Unknown),
+        };
     }
 }
 
@@ -240,7 +236,7 @@ fn create_connection_uri(config: &PersistenceConfig) -> String {
 mod tests {
     use crate::tests::test_utils::shared::{
         ADDITONAL_TRANSLATIONS, assert_on_translation_record, get_testing_persistence_config,
-        stub_translation_record, setup_repo,
+        setup_repo, stub_translation_record,
     };
     use serial_test::serial;
 

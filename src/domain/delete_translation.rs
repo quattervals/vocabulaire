@@ -60,7 +60,7 @@ mod tests {
 
     #[actix_rt::test]
     async fn delete_manually_provoked_error_err() {
-        let mut  repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
+        let mut repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
         repo.set_error(true);
 
         let response = delete_translation(Data::new(repo), WORD, &WORD_LANG).await;

@@ -44,12 +44,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Rust
+        uses: ./.github/actions/setup_rust
+
+      - name: Check Formatting
+        run: cargo fmt --all -- --check
+
       - name: Setup test DB
         run: |
           docker compose -f docker/docker-compose.yml up -d --build --remove-orphans
-
-      - name: Setup Rust
-        uses: ./.github/actions/setup_rust
 
       - name: Run tests
         run: cargo test
