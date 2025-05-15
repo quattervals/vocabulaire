@@ -10,9 +10,9 @@ pub enum CreateError {
     #[error("Bad Input: {0}")]
     InvalidInput(#[from] TranslationRecordError),
     #[error("Read Error: {0}")]
-    ReadError(#[from] RepoReadError),
+    Read(#[from] RepoReadError),
     #[error("Create Error")]
-    CreateError(#[from] RepoCreateError),
+    Create(#[from] RepoCreateError),
     #[error("Duplicate")]
     Duplicate,
 }
@@ -37,10 +37,7 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
 
     let word = tr.word();
 
-    let does_exist: bool = match repository.read_by_word(&word).await {
-        Ok(_) => true,
-        Err(_) => false,
-    };
+    let does_exist = repository.read_by_word(word).await.is_ok();
 
     if !does_exist {
         let create_response = repository.create(&tr).await?;

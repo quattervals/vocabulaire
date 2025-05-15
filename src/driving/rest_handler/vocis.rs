@@ -75,8 +75,8 @@ pub async fn create_translation<T: Repository<TranslationRecord>>(
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
             CreateError::InvalidInput(s) => ApiError::InvalidInput(s.to_string()),
-            CreateError::ReadError(s) => ApiError::NotFound(s.to_string()),
-            CreateError::CreateError(s) => ApiError::BadRequest(s.to_string()),
+            CreateError::Read(s) => ApiError::NotFound(s.to_string()),
+            CreateError::Create(s) => ApiError::BadRequest(s.to_string()),
             CreateError::Duplicate => ApiError::Conflict(e.to_string()),
         })?
 }
@@ -124,9 +124,9 @@ pub async fn update_translation<T: Repository<TranslationRecord>>(
     result
         .map(|v| respond_json(TranslationResponse::from(v)))
         .map_err(|e| match e {
-            UpdateError::WordError(s) => ApiError::InvalidInput(s.to_string()),
-            UpdateError::ReadError(s) => ApiError::NotFound(s.to_string()),
-            UpdateError::UpdateError(s) => ApiError::NotFound(s.to_string()),
+            UpdateError::Word(s) => ApiError::InvalidInput(s.to_string()),
+            UpdateError::Read(s) => ApiError::NotFound(s.to_string()),
+            UpdateError::Update(s) => ApiError::NotFound(s.to_string()),
         })?
 }
 
@@ -143,9 +143,9 @@ pub async fn delete_translation<T: Repository<TranslationRecord>>(
     result
         .map(|_| Ok(HttpResponse::Ok().finish()))
         .map_err(|e| match e {
-            DeleteError::WordError(s) => ApiError::InvalidInput(s.to_string()),
-            DeleteError::ReadError(s) => ApiError::InvalidInput(s.to_string()),
-            DeleteError::DeleteError(s) => ApiError::Unknown(s.to_string()),
+            DeleteError::Word(s) => ApiError::InvalidInput(s.to_string()),
+            DeleteError::Read(s) => ApiError::InvalidInput(s.to_string()),
+            DeleteError::Delete(s) => ApiError::Unknown(s.to_string()),
         })?
 }
 
@@ -371,7 +371,7 @@ mod tests {
         )
         .await;
 
-        assert_eq!(r.status().is_success(), true);
+        assert!(r.status().is_success());
     }
 
     #[serial]
@@ -394,7 +394,7 @@ mod tests {
         )
         .await;
 
-        assert_eq!(r.status().is_client_error(), true);
+        assert!(r.status().is_client_error());
     }
 
     /// Execute a test request and return HttpResponse
@@ -492,7 +492,7 @@ mod tests {
         }
         assert_eq!(&actual.word, word);
         assert_eq!(&actual.lang, lang);
-        assert_on_translations(&actual.translations, &translations);
+        assert_on_translations(&actual.translations, translations);
         assert_eq!(&actual.translation_lang, translation_lang);
     }
 }

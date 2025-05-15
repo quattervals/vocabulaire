@@ -74,11 +74,3 @@ fn routes(cfg: &mut web::ServiceConfig) {
         ),
     );
 }
-
-#[cfg(test)]
-mod unittests {
-    #[test]
-    fn test_hello_world() {
-        assert!(true); // Placeholder test
-    }
-}

@@ -50,6 +50,9 @@ jobs:
       - name: Check Formatting
         run: cargo fmt --all -- --check
 
+      - name: Check Lining
+        run: cargo clippy --all-targets --all-features -- -Dwarnings
+
       - name: Setup test DB
         run: |
           docker compose -f docker/docker-compose.yml up -d --build --remove-orphans

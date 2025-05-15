@@ -8,11 +8,11 @@ use crate::driven::repository::{RepoDeleteError, RepoReadError};
 #[derive(Debug, PartialEq, Error)]
 pub enum DeleteError {
     #[error("Bad Input: {0}")]
-    WordError(#[from] TranslationRecordError),
+    Word(#[from] TranslationRecordError),
     #[error("Read Error: {0}")]
-    ReadError(#[from] RepoReadError),
+    Read(#[from] RepoReadError),
     #[error("Delete Error:")]
-    DeleteError(#[from] RepoDeleteError),
+    Delete(#[from] RepoDeleteError),
 }
 
 pub async fn delete_translation<T: Repository<TranslationRecord>>(
@@ -24,9 +24,9 @@ pub async fn delete_translation<T: Repository<TranslationRecord>>(
 
     let tr_to_be_deleted = repository.read_by_word(&word).await?;
 
-    let delete_response = repository.delete(&tr_to_be_deleted.id()).await?;
+    repository.delete(tr_to_be_deleted.id()).await?;
 
-    Ok(delete_response)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -51,10 +51,10 @@ mod tests {
 
         let response = delete_translation(Data::new(repo), "", &WORD_LANG).await;
 
-        assert_eq!(response.is_err(), true);
+        assert!(response.is_err());
         assert_eq!(
             response.unwrap_err(),
-            DeleteError::WordError(TranslationRecordError::EmptyWord)
+            DeleteError::Word(TranslationRecordError::EmptyWord)
         );
     }
 
@@ -65,10 +65,10 @@ mod tests {
 
         let response = delete_translation(Data::new(repo), WORD, &WORD_LANG).await;
 
-        assert_eq!(response.is_err(), true);
+        assert!(response.is_err());
         assert_eq!(
             response.unwrap_err(),
-            DeleteError::ReadError(RepoReadError::Unknown)
+            DeleteError::Read(RepoReadError::Unknown)
         );
     }
 }
