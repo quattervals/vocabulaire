@@ -2,12 +2,10 @@ use actix_web::dev::Server;
 use actix_web::middleware::Logger;
 use actix_web::{App, HttpServer, web, web::Data};
 
+use crate::domain::ports::TranslationRepository;
+use crate::driving::rest_handler;
 use config::parse_local_config;
 use driven::repository::mongo_repository::VociMongoRepository;
-
-use crate::domain::voci::TranslationRecord;
-use crate::driven::repository::Repository;
-use crate::driving::rest_handler;
 
 mod config;
 mod domain;
@@ -33,9 +31,7 @@ async fn main() {
         .expect("An error occurred while starting the web application");
 }
 
-async fn create_server<T: Repository<TranslationRecord> + Send + Sync + 'static + Clone>(
-    repo: T,
-) -> Result<Server, std::io::Error> {
+async fn create_server(repo: impl TranslationRepository) -> Result<Server, std::io::Error> {
     let server = HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())

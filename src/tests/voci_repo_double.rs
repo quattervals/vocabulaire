@@ -4,16 +4,18 @@ pub mod repo_double {
     use std::cell::RefCell;
 
     use crate::config::PersistenceConfig;
-    use crate::domain::voci::{TranslationId, TranslationRecord, Word};
-    use crate::driven::repository::{
-        RepoCreateError, RepoDeleteError, RepoReadError, RepoUpdateError, Repository,
+    use crate::domain::ports::{
+        RepoCreateError, RepoDeleteError, RepoReadError, RepoUpdateError, TranslationRepository,
     };
+    use crate::domain::voci::{TranslationId, TranslationRecord, Word};
     use crate::tests::test_utils::shared::*;
 
+    #[derive(Clone)]
     struct Wrap(RefCell<bool>);
 
     unsafe impl Sync for Wrap {}
 
+    #[derive(Clone)]
     pub struct VociRepoDouble {
         has_error: Wrap,
     }
@@ -25,7 +27,7 @@ pub mod repo_double {
     }
 
     #[async_trait]
-    impl Repository<TranslationRecord> for VociRepoDouble {
+    impl TranslationRepository for VociRepoDouble {
         fn new(_config: &PersistenceConfig) -> Result<Self, String>
         where
             Self: Sized,

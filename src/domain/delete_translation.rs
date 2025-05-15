@@ -1,9 +1,7 @@
-use actix_web::web;
 use thiserror::Error;
 
-use crate::Repository;
-use crate::domain::voci::{Lang, TranslationRecord, TranslationRecordError, Word};
-use crate::driven::repository::{RepoDeleteError, RepoReadError};
+use crate::domain::ports::{RepoDeleteError, RepoReadError, TranslationRepository};
+use crate::domain::voci::{Lang, TranslationRecordError, Word};
 
 #[derive(Debug, PartialEq, Error)]
 pub enum DeleteError {
@@ -15,8 +13,8 @@ pub enum DeleteError {
     Delete(#[from] RepoDeleteError),
 }
 
-pub async fn delete_translation<T: Repository<TranslationRecord>>(
-    repository: web::Data<T>,
+pub async fn delete_translation(
+    repository: &impl TranslationRepository,
     word: &str,
     lang: &Lang,
 ) -> Result<(), DeleteError> {
@@ -31,7 +29,6 @@ pub async fn delete_translation<T: Repository<TranslationRecord>>(
 
 #[cfg(test)]
 mod tests {
-    use actix_web::web::Data;
 
     use super::*;
     use crate::tests::{test_utils::shared::*, voci_repo_double::repo_double::VociRepoDouble};
@@ -40,7 +37,7 @@ mod tests {
     async fn delete_ok_word_ok() {
         let repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
 
-        let response = delete_translation(Data::new(repo), WORD, &WORD_LANG).await;
+        let response = delete_translation(&repo, WORD, &WORD_LANG).await;
 
         assert_eq!(response, Ok(()));
     }
@@ -49,7 +46,7 @@ mod tests {
     async fn delete_bad_word_err() {
         let repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
 
-        let response = delete_translation(Data::new(repo), "", &WORD_LANG).await;
+        let response = delete_translation(&repo, "", &WORD_LANG).await;
 
         assert!(response.is_err());
         assert_eq!(
@@ -63,7 +60,7 @@ mod tests {
         let mut repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
         repo.set_error(true);
 
-        let response = delete_translation(Data::new(repo), WORD, &WORD_LANG).await;
+        let response = delete_translation(&repo, WORD, &WORD_LANG).await;
 
         assert!(response.is_err());
         assert_eq!(

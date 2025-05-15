@@ -1,9 +1,7 @@
-use actix_web::web;
 use thiserror::Error;
 
-use crate::Repository;
+use crate::domain::ports::{RepoReadError, RepoUpdateError, TranslationRepository};
 use crate::domain::voci::{Lang, TranslationRecord, TranslationRecordError, Word};
-use crate::driven::repository::{RepoReadError, RepoUpdateError};
 
 #[derive(Debug, PartialEq, Error)]
 pub enum UpdateError {
@@ -29,8 +27,8 @@ pub enum UpdateError {
 /// Returns `UpdateError::WordError` if:
 /// * The word is empty or invalid
 /// * The language specification is invalid
-pub async fn update_translation<T: Repository<TranslationRecord>>(
-    repository: web::Data<T>,
+pub async fn update_translation(
+    repository: &impl TranslationRepository,
     word: &str,
     lang: &Lang,
     extra_translations: &Vec<&str>,
@@ -52,7 +50,6 @@ pub async fn update_translation<T: Repository<TranslationRecord>>(
 
 #[cfg(test)]
 mod tests {
-    use actix_web::web::Data;
 
     use super::*;
     use crate::tests::{test_utils::shared::*, voci_repo_double::repo_double::VociRepoDouble};
@@ -61,14 +58,8 @@ mod tests {
     async fn update_existing_record_with_no_extra_word() {
         let repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
 
-        let updated_tr = update_translation(
-            Data::new(repo),
-            WORD,
-            &WORD_LANG,
-            &[].to_vec(),
-            &TRANSLATION_LANG,
-        )
-        .await;
+        let updated_tr =
+            update_translation(&repo, WORD, &WORD_LANG, &[].to_vec(), &TRANSLATION_LANG).await;
 
         let updated_translation = updated_tr.unwrap();
         let (_, _, _, actual_translations, _) = updated_translation.flat();
@@ -86,7 +77,7 @@ mod tests {
         expected.append(&mut ADDITONAL_TRANSLATIONS.map(|t| t.to_string()).to_vec());
 
         let updated_tr = update_translation(
-            Data::new(repo),
+            &repo,
             WORD,
             &WORD_LANG,
             &ADDITONAL_TRANSLATIONS.to_vec(),
