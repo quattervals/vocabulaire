@@ -15,20 +15,15 @@ pub mod server {
     use crate::driven::repository::mongo_repository::VociMongoRepository;
     use crate::driving::rest_handler;
 
-    pub async fn start_server(config: config::Config) -> Result<Server, std::io::Error> {
-        let repo = VociMongoRepository::new(&config.persistence).unwrap();
 
-        create_server(repo).await
-    }
-
-    async fn create_server(repo: impl TranslationRepository) -> Result<Server, std::io::Error> {
+    pub async fn create_server(repo: impl TranslationRepository) -> Result<Server, std::io::Error> {
         let server = HttpServer::new(move || {
             App::new()
                 .wrap(Logger::default())
                 .app_data(Data::new(repo.clone()))
                 .configure(routes)
         })
-        .bind(("127.0.0.1", 8080))?
+        .bind(("127.0.0.1", 8082))?
         .run();
         Ok(server)
     }

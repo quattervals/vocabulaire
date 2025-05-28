@@ -63,7 +63,7 @@ impl TryInto<TranslationRecord> for VociMongo {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct VociMongoRepository {
     database: String,
     collection: String,

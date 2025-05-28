@@ -21,6 +21,9 @@ serial_test = "3.2"
 [dev-dependencies]
 cucumber = "0.21"
 futures = "0.3"
+tokio = { version = "1.45", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+
 
 [[test]]
 name = "example" # this should be the same as the filename of your test target
