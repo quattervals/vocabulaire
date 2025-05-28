@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use thiserror::Error;
 
 use crate::config::PersistenceConfig;
-
 use crate::domain::voci::{TranslationId, TranslationRecord, Word};
 
 #[derive(Error, Debug, PartialEq)]

@@ -10,11 +10,9 @@ pub mod server {
     use actix_web::middleware::Logger;
     use actix_web::{App, HttpServer, web, web::Data};
 
-    use crate::config;
     use crate::domain::ports::TranslationRepository;
     use crate::driven::repository::mongo_repository::VociMongoRepository;
     use crate::driving::rest_handler;
-
 
     pub async fn create_server(repo: impl TranslationRepository) -> Result<Server, std::io::Error> {
         let server = HttpServer::new(move || {

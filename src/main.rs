@@ -12,7 +12,6 @@ async fn main() {
 
     let repo = VociMongoRepository::new(&config.persistence).unwrap();
 
-
     server::create_server(repo)
         .await
         .unwrap()
