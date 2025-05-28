@@ -1,5 +1,5 @@
 use cucumber::{World, given, then, when};
-use reqwest::Client;
+use reqwest::{Client, Response, StatusCode};
 use serde::Serialize;
 
 use vocabulaire::domain::ports::TranslationRepository;
@@ -9,6 +9,7 @@ use vocabulaire::test_utils::utils::shared;
 #[derive(Default, Debug, World)]
 pub struct DatabaseWorld {
     repo: Option<mongo_repository::VociMongoRepository>,
+    server_response: Option<Response>,
 }
 
 #[given("a clean database is available")]
@@ -19,12 +20,10 @@ async fn setup_database(world: &mut DatabaseWorld) {
 
     shared::delete_collection(persistence_config, &repo).await;
     world.repo = Some(repo);
-    println!("setup db");
 }
 
 #[given("the server is started")]
 async fn start_server(world: &mut DatabaseWorld) {
-    println!("starting server");
     let repo_clone = world.repo.as_ref().unwrap().clone();
 
     tokio::spawn(async move {
@@ -37,13 +36,10 @@ async fn start_server(world: &mut DatabaseWorld) {
             Err(e) => eprintln!("Error during server creation: {:?}", e),
         }
     });
-
-    println!("Server started in background.");
-    time::sleep(time::Duration::new(1, 0)).await;
 }
 
-#[when("I add something")]
-async fn add(_world: &mut DatabaseWorld) {
+#[when("I add a complete translation")]
+async fn add(world: &mut DatabaseWorld) {
     let json_object = TranslationRequest {
         word: "chien".to_string(),
         lang: "fr".to_string(),
@@ -55,25 +51,24 @@ async fn add(_world: &mut DatabaseWorld) {
 
     let url = "http://localhost:8082/voci/api/v1/translations";
 
-    match client.post(url).json(&json_object).send().await {
-        Ok(v) => println!("posted {:#?}", v),
+    let response = client.post(url).json(&json_object).send().await;
+
+    match response {
+        Ok(r) => world.server_response = Some(r),
         Err(e) => println!("{:#?}", e),
     }
-
-    println!("db add");
 }
 
-use tokio::time;
 #[when("I perform a database operation")]
 async fn op(_world: &mut DatabaseWorld) {
-    time::sleep(time::Duration::new(1, 0)).await;
     println!("db op");
 }
 
 #[then("the operation should succeed")]
-async fn okop(_world: &mut DatabaseWorld) {
-    println!("db okop op");
-    assert!(true);
+async fn okop(world: &mut DatabaseWorld) {
+    let resp = world.server_response.as_ref().unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
 }
 
 #[derive(Serialize)]
