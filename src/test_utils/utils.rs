@@ -67,7 +67,7 @@ pub mod shared {
 
     pub fn get_testing_config() -> Config {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        d.push("src/tests/test_config.toml");
+        d.push("src/test_utils/test_config.toml");
         parse_config(d)
     }
 
