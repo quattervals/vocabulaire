@@ -8,7 +8,7 @@ pub mod repo_double {
         RepoCreateError, RepoDeleteError, RepoReadError, RepoUpdateError, TranslationRepository,
     };
     use crate::domain::voci::{TranslationId, TranslationRecord, Word};
-    use crate::test_utils::test_utils::shared::*;
+    use crate::test_utils::utils::shared::*;
 
     #[derive(Clone)]
     struct Wrap(RefCell<bool>);

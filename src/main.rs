@@ -2,17 +2,11 @@ use actix_web::dev::Server;
 use actix_web::middleware::Logger;
 use actix_web::{App, HttpServer, web, web::Data};
 
-use crate::domain::ports::TranslationRepository;
-use crate::driving::rest_handler;
-use config::parse_local_config;
-use driven::repository::mongo_repository::VociMongoRepository;
 use env_logger::Env;
-
-mod config;
-mod domain;
-mod driven;
-mod driving;
-mod test_utils;
+use vocabulaire::config::parse_local_config;
+use vocabulaire::domain::ports::TranslationRepository;
+use vocabulaire::driven::repository::mongo_repository::VociMongoRepository;
+use vocabulaire::driving::rest_handler;
 
 #[actix_web::main]
 async fn main() {
