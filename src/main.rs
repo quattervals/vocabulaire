@@ -12,7 +12,7 @@ mod config;
 mod domain;
 mod driven;
 mod driving;
-mod tests;
+mod test_utils;
 
 #[actix_web::main]
 async fn main() {

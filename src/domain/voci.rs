@@ -186,7 +186,7 @@ fn vectors_are_equal<T: Ord + Clone>(vec1: &[T], vec2: &[T]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::test_utils::shared::{
+    use crate::test_utils::test_utils::shared::{
         ADDITONAL_TRANSLATIONS, TRANSLATIONS, stub_translation_record,
     };
 

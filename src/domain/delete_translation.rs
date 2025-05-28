@@ -31,7 +31,7 @@ pub async fn delete_translation(
 mod tests {
 
     use super::*;
-    use crate::tests::{test_utils::shared::*, voci_repo_double::repo_double::VociRepoDouble};
+    use crate::test_utils::{test_utils::shared::*, voci_repo_double::repo_double::VociRepoDouble};
 
     #[actix_rt::test]
     async fn delete_ok_word_ok() {

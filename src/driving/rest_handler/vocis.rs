@@ -167,7 +167,7 @@ mod tests {
 
     use super::*;
     use crate::driven::repository::mongo_repository::VociMongoRepository;
-    use crate::tests::test_utils::shared::*;
+    use crate::test_utils::test_utils::shared::*;
 
     #[serial]
     #[actix_web::test]
