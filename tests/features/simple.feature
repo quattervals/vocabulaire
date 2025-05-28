@@ -16,3 +16,5 @@ Feature: Animal feature
     #     let word = Word::new("chien".to_string(), Lang::fr);
     #     assert_eq!((word.unwrap().value()), (&"chien".to_string(), &Lang::fr));
     # }
+
+
