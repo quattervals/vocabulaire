@@ -229,7 +229,7 @@ fn create_connection_uri(config: &PersistenceConfig) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::test_utils::shared::{
+    use crate::test_utils::utils::shared::{
         ADDITONAL_TRANSLATIONS, assert_on_translation_record, get_testing_persistence_config,
         setup_repo, stub_translation_record,
     };

@@ -1,4 +1,3 @@
-#[cfg(test)]
 pub mod shared {
 
     use mongodb::Collection;

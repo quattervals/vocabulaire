@@ -1,1 +1,1 @@
-pub(crate) mod rest_handler;
+pub mod rest_handler;
