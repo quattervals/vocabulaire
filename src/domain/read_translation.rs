@@ -32,7 +32,7 @@ pub async fn read_translation(
 mod tests {
 
     use super::*;
-    use crate::tests::{test_utils::shared::*, voci_repo_double::repo_double::VociRepoDouble};
+    use crate::test_utils::{test_utils::shared::*, voci_repo_double::repo_double::VociRepoDouble};
 
     #[actix_rt::test]
     async fn read_well_formatted_word() {
