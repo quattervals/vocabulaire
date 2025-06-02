@@ -4,6 +4,7 @@ use std::net::TcpListener;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::sync::oneshot;
+use std::path::{Path, PathBuf};
 
 /// Outer layer interna
 use vocabulaire::domain::ports::TranslationRepository;
@@ -14,6 +15,11 @@ use vocabulaire::test_utils::utils::shared;
 
 /// Interna used for testing convenience
 use vocabulaire::driving::rest_handler::vocis::CreateTranslationRequest;
+
+const SERVER_URL: &str = "http://localhost";
+const API_ROUTE: &str = "voci/api/v1/translations";
+const TEST_FILES: &str = "tests/features";
+const TEST_RESOURCES: &str = "tests/resources";
 
 #[derive(Default, Debug, World)]
 pub struct DatabaseWorld {
@@ -71,10 +77,11 @@ async fn start_server(world: &mut DatabaseWorld) {
 async fn add(world: &mut DatabaseWorld) {
     let port = world.connection_port.unwrap_or(8082);
     let client = Client::new();
-    let request = read_from_file("tests/resources/chien.json").await;
+
+    let request = json_from_file(Path::new(TEST_RESOURCES).join("chien.json")).await;
     let req = json_to_translation_request(request.clone()).await;
 
-    let url = format!("http://localhost:{}/voci/api/v1/translations", port); //todo: work with better strings
+    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
 
     let response = client.post(url).json(&req).send().await;
 
@@ -91,14 +98,28 @@ async fn add(world: &mut DatabaseWorld) {
     world.sent_json = Some(request);
 }
 
-#[then("the operation should succeed")]
-async fn is_ok(world: &mut DatabaseWorld) {
-    assert_eq!(world.server_status, StatusCode::OK);
+#[when("I read an existing word")]
+async fn read_existing_word(world: &mut DatabaseWorld) {}
+
+#[then(expr = r"the http response is {string}")]
+async fn http_response(world: &mut DatabaseWorld, status_code: String) {
+    let code = match status_code.as_ref() {
+        "OK" => StatusCode::OK,
+        "CONFLICT" => StatusCode::CONFLICT,
+        _ => StatusCode::NOT_IMPLEMENTED,
+    };
+
+    assert_eq!(world.server_status, code);
 }
 
-#[then("the opration is a client error")]
-async fn is_client_error(world: &mut DatabaseWorld) {
-    assert!(world.server_status.is_client_error());
+#[then(expr = r"the http response class is {string}")]
+async fn http_response_class(world: &mut DatabaseWorld, status_class: String) {
+    let status_fn: fn(&StatusCode) -> bool = match status_class.as_ref() {
+        "Client Error" => StatusCode::is_client_error,
+        _ => StatusCode::is_success,
+    };
+
+    assert!(status_fn(&world.server_status));
 }
 
 #[then("the same translation record is returned")]
@@ -120,33 +141,6 @@ async fn got_same_translation(world: &mut DatabaseWorld) {
     assert!(fields_equal);
 }
 
-fn compare_fields_by_key(
-    json1: &serde_json::Value,
-    json2: &serde_json::Value,
-    keys: &[&str],
-) -> bool {
-    for &key in keys {
-        let value1 = json1.get(key);
-        let value2 = json2.get(key);
-
-        let are_equal = match (value1, value2) {
-            (Some(v1), Some(v2)) => v1 == v2,
-            (None, None) => false,
-            _ => false,
-        };
-
-        if !are_equal {
-            return false;
-        }
-    }
-    true
-}
-
-#[then("is duplicate")]
-async fn is_duplicate(world: &mut DatabaseWorld) {
-    assert_eq!(world.server_status, StatusCode::CONFLICT);
-}
-
 #[tokio::main]
 async fn main() {
     DatabaseWorld::cucumber()
@@ -158,11 +152,23 @@ async fn main() {
                 }
             })
         })
-        .run("tests/features/voci.feature")
+        .run(format!("{TEST_FILES}/create.feature"))
+        .await;
+
+    DatabaseWorld::cucumber()
+        .max_concurrent_scenarios(1)
+        .after(|_feature, _rule, _scenario, _ev, world| {
+            Box::pin(async move {
+                if let Some(world) = world {
+                    shutdown_server(world).await;
+                }
+            })
+        })
+       .run(format!("{TEST_FILES}/rud.feature"))
         .await;
 }
 
-async fn read_from_file(file_path: &str) -> serde_json::Value {
+async fn json_from_file(file_path: PathBuf) -> serde_json::Value {
     let mut file = File::open(file_path).await.expect("Unable to open file");
     let mut contents = String::new();
 
@@ -187,7 +193,7 @@ fn get_available_port() -> u16 {
 
 async fn wait_for_server_on_port(port: u16) {
     let client = Client::new();
-    let url = format!("http://localhost:{port}/voci/api/v1/translations"); // todo better url
+    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
 
     for attempt in 1..=30 {
         match client.get(&url).send().await {
@@ -216,4 +222,26 @@ async fn shutdown_server(world: &mut DatabaseWorld) {
 
     // Give the port time to be released
     tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+}
+
+fn compare_fields_by_key(
+    json1: &serde_json::Value,
+    json2: &serde_json::Value,
+    keys: &[&str],
+) -> bool {
+    for &key in keys {
+        let value1 = json1.get(key);
+        let value2 = json2.get(key);
+
+        let are_equal = match (value1, value2) {
+            (Some(v1), Some(v2)) => v1 == v2,
+            (None, None) => false,
+            _ => false,
+        };
+
+        if !are_equal {
+            return false;
+        }
+    }
+    true
 }

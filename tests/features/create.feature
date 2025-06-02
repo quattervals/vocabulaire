@@ -1,4 +1,4 @@
-Feature: Database operations
+Feature: Post Vocabulary Items
 
   Background:
     Given a clean database is available
@@ -6,7 +6,7 @@ Feature: Database operations
 
   Scenario: Add one Translation
     When I add a complete translation
-    Then the operation should succeed
+    Then the http response is "OK"
 
   Scenario: Add one Translation
     When I add a complete translation
@@ -15,5 +15,5 @@ Feature: Database operations
   Scenario: Add same Translation twice
     When I add a complete translation
     And I add a complete translation
-    Then the opration is a client error
-    And is duplicate
+    Then the http response class is "Client Error"
+    And the http response is "CONFLICT"
