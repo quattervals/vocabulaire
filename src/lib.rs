@@ -14,14 +14,17 @@ pub mod server {
     use crate::driven::repository::mongo_repository::VociMongoRepository;
     use crate::driving::rest_handler;
 
-    pub async fn create_server(repo: impl TranslationRepository) -> Result<Server, std::io::Error> {
+    pub async fn create_server(
+        repo: impl TranslationRepository,
+        port: u16,
+    ) -> Result<Server, std::io::Error> {
         let server = HttpServer::new(move || {
             App::new()
                 .wrap(Logger::default())
                 .app_data(Data::new(repo.clone()))
                 .configure(routes)
         })
-        .bind(("127.0.0.1", 8082))?
+        .bind(("127.0.0.1", port))?
         .run();
         Ok(server)
     }

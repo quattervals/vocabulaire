@@ -8,6 +8,10 @@ Feature: Database operations
     When I add a complete translation
     Then the operation should succeed
 
+  Scenario: Add one Translation
+    When I add a complete translation
+    Then the same translation record is returned
+
   Scenario: Add same Translation twice
     When I add a complete translation
     And I add a complete translation
