@@ -1,10 +1,10 @@
 use cucumber::{World, given, then, when};
 use reqwest::{Client, StatusCode};
 use std::net::TcpListener;
+use std::path::{Path, PathBuf};
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::sync::oneshot;
-use std::path::{Path, PathBuf};
 
 /// Outer layer interna
 use vocabulaire::domain::ports::TranslationRepository;
@@ -14,7 +14,9 @@ use vocabulaire::driven::repository::mongo_repository;
 use vocabulaire::test_utils::utils::shared;
 
 /// Interna used for testing convenience
-use vocabulaire::driving::rest_handler::vocis::CreateTranslationRequest;
+use vocabulaire::driving::rest_handler::vocis::{
+    CreateTranslationRequest, RequestTranslationByWord,
+};
 
 const SERVER_URL: &str = "http://localhost";
 const API_ROUTE: &str = "voci/api/v1/translations";
@@ -74,16 +76,17 @@ async fn start_server(world: &mut DatabaseWorld) {
 }
 
 #[when("I add a complete translation")]
+#[given("there is a translation")]
 async fn add(world: &mut DatabaseWorld) {
     let port = world.connection_port.unwrap_or(8082);
+    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
     let client = Client::new();
 
-    let request = json_from_file(Path::new(TEST_RESOURCES).join("chien.json")).await;
-    let req = json_to_translation_request(request.clone()).await;
+    let request = json_from_file(Path::new(TEST_RESOURCES).join("create_chien.json")).await;
+    let tr_req: CreateTranslationRequest =
+        serde_json::from_value(request.clone()).expect("unable to convert from json to request");
 
-    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
-
-    let response = client.post(url).json(&req).send().await;
+    let response = client.post(url).json(&tr_req).send().await;
 
     match response {
         Ok(r) => {
@@ -99,7 +102,28 @@ async fn add(world: &mut DatabaseWorld) {
 }
 
 #[when("I read an existing word")]
-async fn read_existing_word(world: &mut DatabaseWorld) {}
+async fn read_existing_word(world: &mut DatabaseWorld) {
+    let port = world.connection_port.unwrap_or(8082);
+    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
+    let client = Client::new();
+
+    let request = json_from_file(Path::new(TEST_RESOURCES).join("word_chien.json")).await;
+    let word_req: RequestTranslationByWord =
+        serde_json::from_value(request.clone()).expect("should have worked");
+
+    let response = client.get(url).json(&word_req).send().await;
+
+    match response {
+        Ok(r) => {
+            let status_code = r.status();
+            let bytes = r.bytes().await;
+
+            world.server_status = status_code;
+            world.server_bytes = bytes.ok();
+        }
+        Err(e) => println!("{:#?}", e),
+    }
+}
 
 #[then(expr = r"the http response is {string}")]
 async fn http_response(world: &mut DatabaseWorld, status_code: String) {
@@ -131,10 +155,30 @@ async fn got_same_translation(world: &mut DatabaseWorld) {
 
     let original_request = world.sent_json.as_ref();
 
-    let keys_equal = ["word", "lang", "translations"];
+    let keys_equal = ["word", "lang", "translations", "translation_lang"];
     let fields_equal = compare_fields_by_key(
         original_request.unwrap(),
         json_value.as_ref().unwrap(),
+        &keys_equal,
+    );
+
+    assert!(fields_equal);
+}
+
+#[then("the corresponding TranslationRecord is received")]
+async fn got_read_translation(world: &mut DatabaseWorld) {
+    let served_response: Option<serde_json::Value> = world
+        .server_bytes
+        .as_ref()
+        .and_then(|b| serde_json::from_slice(b).ok());
+
+    let expected_translationrecord =
+        json_from_file(Path::new(TEST_RESOURCES).join("create_chien.json")).await;
+
+    let keys_equal = ["word", "lang", "translations", "translation_lang"];
+    let fields_equal = compare_fields_by_key(
+        &expected_translationrecord,
+        served_response.as_ref().unwrap(),
         &keys_equal,
     );
 
@@ -164,7 +208,7 @@ async fn main() {
                 }
             })
         })
-       .run(format!("{TEST_FILES}/rud.feature"))
+        .run(format!("{TEST_FILES}/rud.feature"))
         .await;
 }
 
@@ -177,10 +221,6 @@ async fn json_from_file(file_path: PathBuf) -> serde_json::Value {
         .expect("Unable to read file");
 
     serde_json::from_str(&contents).expect("Unable to parse JSON")
-}
-
-async fn json_to_translation_request(tr: serde_json::Value) -> CreateTranslationRequest {
-    serde_json::from_value(tr).expect("unable to convert from json to request")
 }
 
 fn get_available_port() -> u16 {

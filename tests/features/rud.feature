@@ -3,9 +3,9 @@ Feature: Read, Update, Delete Vocabulary Items
   Background:
     Given a clean database is available
     And the server is started
-    And I add a complete translation
+    And there is a translation
 
   Scenario: Reading a Translation
-    When I read existing word
-    Then I receive the corresponding TranslationRecord
+    When I read an existing word
+    Then the corresponding TranslationRecord is received
     And the http response is "OK"

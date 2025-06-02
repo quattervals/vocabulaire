@@ -1,4 +1,4 @@
-Feature: Post Vocabulary Items
+Feature: Create Vocabulary Items
 
   Background:
     Given a clean database is available
