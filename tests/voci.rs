@@ -1,5 +1,5 @@
 use cucumber::{World, given, then, when};
-use reqwest::{Client, Response, StatusCode};
+use reqwest::{Client, StatusCode};
 use std::net::TcpListener;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
@@ -18,10 +18,14 @@ use vocabulaire::driving::rest_handler::vocis::CreateTranslationRequest;
 #[derive(Default, Debug, World)]
 pub struct DatabaseWorld {
     repo: Option<mongo_repository::VociMongoRepository>,
-    server_response: Option<Response>,
-    server_port: Option<u16>,
+    connection_port: Option<u16>,
+
     shutdown_tx: Option<oneshot::Sender<()>>,
     server_handle: Option<tokio::task::JoinHandle<()>>,
+
+    server_bytes: Option<actix_web::web::Bytes>,
+    server_status: StatusCode,
+    sent_json: Option<serde_json::Value>,
 }
 
 #[given("a clean database is available")]
@@ -37,7 +41,7 @@ async fn setup_database(world: &mut DatabaseWorld) {
 async fn start_server(world: &mut DatabaseWorld) {
     let repo = world.repo.as_ref().unwrap().clone();
     let port = get_available_port();
-    world.server_port = Some(port);
+    world.connection_port = Some(port);
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
 
@@ -65,44 +69,82 @@ async fn start_server(world: &mut DatabaseWorld) {
 
 #[when("I add a complete translation")]
 async fn add(world: &mut DatabaseWorld) {
-    let port = world.server_port.unwrap_or(8082);
-    let req = read_translation_request_from_file("tests/resources/chien.json").await;
+    let port = world.connection_port.unwrap_or(8082);
     let client = Client::new();
+    let request = read_from_file("tests/resources/chien.json").await;
+    let req = json_to_translation_request(request.clone()).await;
+
     let url = format!("http://localhost:{}/voci/api/v1/translations", port); //todo: work with better strings
+
     let response = client.post(url).json(&req).send().await;
 
     match response {
-        Ok(r) => world.server_response = Some(r),
+        Ok(r) => {
+            let status_code = r.status();
+            let bytes = r.bytes().await;
+
+            world.server_status = status_code;
+            world.server_bytes = bytes.ok();
+        }
         Err(e) => println!("{:#?}", e),
     }
+    world.sent_json = Some(request);
 }
 
 #[then("the operation should succeed")]
 async fn is_ok(world: &mut DatabaseWorld) {
-    assert_eq!(
-        world.server_response.as_ref().unwrap().status(),
-        StatusCode::OK
-    );
+    assert_eq!(world.server_status, StatusCode::OK);
 }
 
 #[then("the opration is a client error")]
 async fn is_client_error(world: &mut DatabaseWorld) {
-    assert!(
-        world
-            .server_response
-            .as_ref()
-            .unwrap()
-            .status()
-            .is_client_error()
+    assert!(world.server_status.is_client_error());
+}
+
+#[then("the same translation record is returned")]
+async fn got_same_translation(world: &mut DatabaseWorld) {
+    let json_value: Option<serde_json::Value> = world
+        .server_bytes
+        .as_ref()
+        .and_then(|b| serde_json::from_slice(b).ok());
+
+    let original_request = world.sent_json.as_ref();
+
+    let keys_equal = ["word", "lang", "translations"];
+    let fields_equal = compare_fields_by_key(
+        original_request.unwrap(),
+        json_value.as_ref().unwrap(),
+        &keys_equal,
     );
+
+    assert!(fields_equal);
+}
+
+fn compare_fields_by_key(
+    json1: &serde_json::Value,
+    json2: &serde_json::Value,
+    keys: &[&str],
+) -> bool {
+    for &key in keys {
+        let value1 = json1.get(key);
+        let value2 = json2.get(key);
+
+        let are_equal = match (value1, value2) {
+            (Some(v1), Some(v2)) => v1 == v2,
+            (None, None) => false,
+            _ => false,
+        };
+
+        if !are_equal {
+            return false;
+        }
+    }
+    true
 }
 
 #[then("is duplicate")]
 async fn is_duplicate(world: &mut DatabaseWorld) {
-    assert_eq!(
-        world.server_response.as_ref().unwrap().status(),
-        StatusCode::CONFLICT
-    );
+    assert_eq!(world.server_status, StatusCode::CONFLICT);
 }
 
 #[tokio::main]
@@ -120,7 +162,7 @@ async fn main() {
         .await;
 }
 
-async fn read_translation_request_from_file(file_path: &str) -> CreateTranslationRequest {
+async fn read_from_file(file_path: &str) -> serde_json::Value {
     let mut file = File::open(file_path).await.expect("Unable to open file");
     let mut contents = String::new();
 
@@ -129,6 +171,10 @@ async fn read_translation_request_from_file(file_path: &str) -> CreateTranslatio
         .expect("Unable to read file");
 
     serde_json::from_str(&contents).expect("Unable to parse JSON")
+}
+
+async fn json_to_translation_request(tr: serde_json::Value) -> CreateTranslationRequest {
+    serde_json::from_value(tr).expect("unable to convert from json to request")
 }
 
 fn get_available_port() -> u16 {
