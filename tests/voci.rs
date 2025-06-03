@@ -149,6 +149,30 @@ async fn delete_existing_word(world: &mut DatabaseWorld) {
     }
 }
 
+#[when("I update an existing translation")]
+async fn update_existing_word(world: &mut DatabaseWorld) {
+    let port = world.connection_port.unwrap_or(8082);
+    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
+    let client = Client::new();
+
+    let request = json_from_file(Path::new(TEST_RESOURCES).join("chien_update.json")).await;
+    let word_req: CreateTranslationRequest =
+        serde_json::from_value(request.clone()).expect("should have worked");
+
+    let response = client.put(url).json(&word_req).send().await;
+
+    match response {
+        Ok(r) => {
+            let status_code = r.status();
+            let bytes = r.bytes().await;
+
+            world.server_status = status_code;
+            world.server_bytes = bytes.ok();
+        }
+        Err(e) => println!("{:#?}", e),
+    }
+}
+
 #[when("I delete a non-existing translation")]
 async fn delete_nonexisting_word(world: &mut DatabaseWorld) {
     let port = world.connection_port.unwrap_or(8082);
@@ -173,6 +197,29 @@ async fn delete_nonexisting_word(world: &mut DatabaseWorld) {
     }
 }
 
+#[when("I update a non-existing translation")]
+async fn update_nonexisting_word(world: &mut DatabaseWorld) {
+    let port = world.connection_port.unwrap_or(8082);
+    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
+    let client = Client::new();
+
+    let request = json_from_file(Path::new(TEST_RESOURCES).join("translation_nonexisting.json")).await;
+    let word_req: RequestTranslationByWord =
+        serde_json::from_value(request.clone()).expect("should have worked");
+
+    let response = client.delete(url).json(&word_req).send().await;
+
+    match response {
+        Ok(r) => {
+            let status_code = r.status();
+            let bytes = r.bytes().await;
+
+            world.server_status = status_code;
+            world.server_bytes = bytes.ok();
+        }
+        Err(e) => println!("{:#?}", e),
+    }
+}
 
 #[then(expr = r"the http response is {string}")]
 async fn http_response(world: &mut DatabaseWorld, status_code: String) {
@@ -196,7 +243,6 @@ async fn http_response_class(world: &mut DatabaseWorld, status_class: String) {
     assert!(status_fn(&world.server_status));
 }
 
-
 #[then("the corresponding TranslationRecord is received")]
 async fn got_read_translation(world: &mut DatabaseWorld) {
     let served_response: Option<serde_json::Value> = world
@@ -215,6 +261,33 @@ async fn got_read_translation(world: &mut DatabaseWorld) {
     );
 
     assert!(fields_equal);
+}
+
+#[then("the updated TranslationRecord is received")]
+async fn updated_translation(world: &mut DatabaseWorld) {
+    let served_response: Option<serde_json::Value> = world
+        .server_bytes
+        .as_ref()
+        .and_then(|b| serde_json::from_slice(b).ok());
+
+    let expected_translationrecord =
+        json_from_file(Path::new(TEST_RESOURCES).join("chien_update.json")).await;
+
+    let served_translations = served_response.unwrap();
+    let served_translations = served_translations
+        .get("translations")
+        .expect("no translation");
+    let extra_translation = expected_translationrecord
+        .get("translations")
+        .expect("no translation");
+
+    let is_updated = extra_translation
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|i| served_translations.as_array().unwrap().contains(i));
+
+    assert!(is_updated);
 }
 
 #[tokio::main]
