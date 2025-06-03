@@ -74,7 +74,7 @@ async fn start_server(world: &mut DatabaseWorld) {
     wait_for_server_on_port(port).await;
 }
 
-#[when("I add a complete translation")]
+#[when("I create a sound translation item")]
 #[given("there is a translation")]
 async fn add(world: &mut DatabaseWorld) {
     let port = world.connection_port.unwrap_or(8082);
@@ -99,115 +99,47 @@ async fn add(world: &mut DatabaseWorld) {
     }
 }
 
-#[when("I read an existing word")]
-async fn read_existing_word(world: &mut DatabaseWorld) {
+#[when(expr = r"I {word} a(n) {word} translation")]
+async fn work_on_translation(world: &mut DatabaseWorld, operation: String, existence: String) {
     let port = world.connection_port.unwrap_or(8082);
     let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
     let client = Client::new();
 
-    let request = json_from_file(Path::new(TEST_RESOURCES).join("word_chien.json")).await;
-    let word_req: RequestTranslationByWord =
-        serde_json::from_value(request.clone()).expect("should have worked");
+    let file_prefix = match existence.as_str() {
+        "existing" => "chien",
+        "non-existing" => "nonexisting",
+        _ => panic!("Unsupported operation: {operation}"),
+    };
 
-    let response = client.get(url).json(&word_req).send().await;
-
-    match response {
-        Ok(r) => {
-            let status_code = r.status();
-            let bytes = r.bytes().await;
-
-            world.server_status = status_code;
-            world.server_bytes = bytes.ok();
+    let response = match operation.as_str() {
+        "read" => {
+            let request_file =
+                json_from_file(Path::new(TEST_RESOURCES).join(format!("{file_prefix}_word.json")))
+                    .await;
+            let request: RequestTranslationByWord =
+                serde_json::from_value(request_file.clone()).unwrap();
+            client.get(url).json(&request).send().await
         }
-        Err(e) => println!("{:#?}", e),
-    }
-}
-
-//todo: similar functions for delete/read/create/update
-
-#[when("I delete an existing translation")]
-async fn delete_existing_word(world: &mut DatabaseWorld) {
-    let port = world.connection_port.unwrap_or(8082);
-    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
-    let client = Client::new();
-
-    let request = json_from_file(Path::new(TEST_RESOURCES).join("word_chien.json")).await;
-    let word_req: RequestTranslationByWord =
-        serde_json::from_value(request.clone()).expect("should have worked");
-
-    let response = client.delete(url).json(&word_req).send().await;
-
-    match response {
-        Ok(r) => {
-            let status_code = r.status();
-            let bytes = r.bytes().await;
-
-            world.server_status = status_code;
-            world.server_bytes = bytes.ok();
+        "update" => {
+            let request = json_from_file(
+                Path::new(TEST_RESOURCES).join(format!("{file_prefix}_update.json")),
+            )
+            .await;
+            let word_req: CreateTranslationRequest =
+                serde_json::from_value(request.clone()).unwrap();
+            client.put(url).json(&word_req).send().await
         }
-        Err(e) => println!("{:#?}", e),
-    }
-}
 
-#[when("I update an existing translation")]
-async fn update_existing_word(world: &mut DatabaseWorld) {
-    let port = world.connection_port.unwrap_or(8082);
-    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
-    let client = Client::new();
-
-    let request = json_from_file(Path::new(TEST_RESOURCES).join("chien_update.json")).await;
-    let word_req: CreateTranslationRequest =
-        serde_json::from_value(request.clone()).expect("should have worked");
-
-    let response = client.put(url).json(&word_req).send().await;
-
-    match response {
-        Ok(r) => {
-            let status_code = r.status();
-            let bytes = r.bytes().await;
-
-            world.server_status = status_code;
-            world.server_bytes = bytes.ok();
+        "delete" => {
+            let request =
+                json_from_file(Path::new(TEST_RESOURCES).join(format!("{file_prefix}_word.json")))
+                    .await;
+            let word_req: RequestTranslationByWord =
+                serde_json::from_value(request.clone()).unwrap();
+            client.delete(url).json(&word_req).send().await
         }
-        Err(e) => println!("{:#?}", e),
-    }
-}
-
-#[when("I delete a non-existing translation")]
-async fn delete_nonexisting_word(world: &mut DatabaseWorld) {
-    let port = world.connection_port.unwrap_or(8082);
-    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
-    let client = Client::new();
-
-    let request = json_from_file(Path::new(TEST_RESOURCES).join("word_nonexisting.json")).await;
-    let word_req: RequestTranslationByWord =
-        serde_json::from_value(request.clone()).expect("should have worked");
-
-    let response = client.delete(url).json(&word_req).send().await;
-
-    match response {
-        Ok(r) => {
-            let status_code = r.status();
-            let bytes = r.bytes().await;
-
-            world.server_status = status_code;
-            world.server_bytes = bytes.ok();
-        }
-        Err(e) => println!("{:#?}", e),
-    }
-}
-
-#[when("I update a non-existing translation")]
-async fn update_nonexisting_word(world: &mut DatabaseWorld) {
-    let port = world.connection_port.unwrap_or(8082);
-    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
-    let client = Client::new();
-
-    let request = json_from_file(Path::new(TEST_RESOURCES).join("translation_nonexisting.json")).await;
-    let word_req: RequestTranslationByWord =
-        serde_json::from_value(request.clone()).expect("should have worked");
-
-    let response = client.delete(url).json(&word_req).send().await;
+        _ => panic!("Unsupported operation: {operation}"),
+    };
 
     match response {
         Ok(r) => {
@@ -227,6 +159,7 @@ async fn http_response(world: &mut DatabaseWorld, status_code: String) {
         "OK" => StatusCode::OK,
         "CONFLICT" => StatusCode::CONFLICT,
         "BAD_REQUEST" => StatusCode::BAD_REQUEST,
+        "NOT_FOUND" => StatusCode::NOT_FOUND,
         _ => StatusCode::NOT_IMPLEMENTED,
     };
 

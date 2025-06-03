@@ -5,15 +5,15 @@ Feature: Create Vocabulary Items
     And the server is started
 
   Scenario: Add one Translation
-    When I add a complete translation
+    When I create a sound translation item
     Then the http response is "OK"
 
   Scenario: Add one Translation
-    When I add a complete translation
+    When I create a sound translation item
     Then the corresponding TranslationRecord is received
 
   Scenario: Add same Translation twice
-    When I add a complete translation
-    And I add a complete translation
+    When I create a sound translation item
+    And I create a sound translation item
     Then the http response class is "Client Error"
     And the http response is "CONFLICT"
