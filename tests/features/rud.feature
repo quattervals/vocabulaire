@@ -6,9 +6,13 @@ Feature: Read, Update, Delete Vocabulary Items
     And there is a translation
 
   Scenario: Reading a Translation
-    When I read an existing word
+    When I read an existing translation
     Then the corresponding TranslationRecord is received
     And the http response is "OK"
+
+  Scenario: Reading a non-existing Translation
+    When I read a non-existing translation
+    And the http response is "BAD_REQUEST"
 
   Scenario: Deleting a Translation
     When I delete an existing translation
@@ -23,6 +27,6 @@ Feature: Read, Update, Delete Vocabulary Items
     Then the updated TranslationRecord is received
     And the http response is "OK"
 
-  Scenario: Update an existing Translation
+  Scenario: Update a non existing Translation
     When I update a non-existing translation
-    Then the http response is "BAD_REQUEST"
+    Then the http response is "NOT_FOUND"
