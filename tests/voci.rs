@@ -33,7 +33,6 @@ pub struct DatabaseWorld {
 
     server_bytes: Option<actix_web::web::Bytes>,
     server_status: StatusCode,
-    sent_json: Option<serde_json::Value>,
 }
 
 #[given("a clean database is available")]
@@ -98,7 +97,6 @@ async fn add(world: &mut DatabaseWorld) {
         }
         Err(e) => println!("{:#?}", e),
     }
-    world.sent_json = Some(request);
 }
 
 #[when("I read an existing word")]
@@ -125,11 +123,63 @@ async fn read_existing_word(world: &mut DatabaseWorld) {
     }
 }
 
+//todo: similar functions for delete/read/create/update
+
+#[when("I delete an existing translation")]
+async fn delete_existing_word(world: &mut DatabaseWorld) {
+    let port = world.connection_port.unwrap_or(8082);
+    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
+    let client = Client::new();
+
+    let request = json_from_file(Path::new(TEST_RESOURCES).join("word_chien.json")).await;
+    let word_req: RequestTranslationByWord =
+        serde_json::from_value(request.clone()).expect("should have worked");
+
+    let response = client.delete(url).json(&word_req).send().await;
+
+    match response {
+        Ok(r) => {
+            let status_code = r.status();
+            let bytes = r.bytes().await;
+
+            world.server_status = status_code;
+            world.server_bytes = bytes.ok();
+        }
+        Err(e) => println!("{:#?}", e),
+    }
+}
+
+#[when("I delete a non-existing translation")]
+async fn delete_nonexisting_word(world: &mut DatabaseWorld) {
+    let port = world.connection_port.unwrap_or(8082);
+    let url = format!("{SERVER_URL}:{port}/{API_ROUTE}");
+    let client = Client::new();
+
+    let request = json_from_file(Path::new(TEST_RESOURCES).join("word_nonexisting.json")).await;
+    let word_req: RequestTranslationByWord =
+        serde_json::from_value(request.clone()).expect("should have worked");
+
+    let response = client.delete(url).json(&word_req).send().await;
+
+    match response {
+        Ok(r) => {
+            let status_code = r.status();
+            let bytes = r.bytes().await;
+
+            world.server_status = status_code;
+            world.server_bytes = bytes.ok();
+        }
+        Err(e) => println!("{:#?}", e),
+    }
+}
+
+
 #[then(expr = r"the http response is {string}")]
 async fn http_response(world: &mut DatabaseWorld, status_code: String) {
     let code = match status_code.as_ref() {
         "OK" => StatusCode::OK,
         "CONFLICT" => StatusCode::CONFLICT,
+        "BAD_REQUEST" => StatusCode::BAD_REQUEST,
         _ => StatusCode::NOT_IMPLEMENTED,
     };
 
@@ -146,24 +196,6 @@ async fn http_response_class(world: &mut DatabaseWorld, status_class: String) {
     assert!(status_fn(&world.server_status));
 }
 
-#[then("the same translation record is returned")]
-async fn got_same_translation(world: &mut DatabaseWorld) {
-    let json_value: Option<serde_json::Value> = world
-        .server_bytes
-        .as_ref()
-        .and_then(|b| serde_json::from_slice(b).ok());
-
-    let original_request = world.sent_json.as_ref();
-
-    let keys_equal = ["word", "lang", "translations", "translation_lang"];
-    let fields_equal = compare_fields_by_key(
-        original_request.unwrap(),
-        json_value.as_ref().unwrap(),
-        &keys_equal,
-    );
-
-    assert!(fields_equal);
-}
 
 #[then("the corresponding TranslationRecord is received")]
 async fn got_read_translation(world: &mut DatabaseWorld) {
