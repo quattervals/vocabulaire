@@ -9,3 +9,12 @@ Feature: Read, Update, Delete Vocabulary Items
     When I read an existing word
     Then the corresponding TranslationRecord is received
     And the http response is "OK"
+
+
+  Scenario: Deleting a Translation
+    When I delete an existing translation
+    And the http response is "OK"
+
+  Scenario: Deleting a non existing Translation
+    When I delete a non-existing translation
+    Then the http response is "BAD_REQUEST"

@@ -10,7 +10,7 @@ Feature: Create Vocabulary Items
 
   Scenario: Add one Translation
     When I add a complete translation
-    Then the same translation record is returned
+    Then the corresponding TranslationRecord is received
 
   Scenario: Add same Translation twice
     When I add a complete translation
