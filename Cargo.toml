@@ -27,9 +27,5 @@ serial_test = "3.2"
 serde_json = "1.0"
 
 [[test]]
-name = "example"
-harness = false
-
-[[test]]
 name = "voci"
 harness = false
