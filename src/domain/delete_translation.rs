@@ -18,7 +18,7 @@ pub async fn delete_translation(
     word: &str,
     lang: &Lang,
 ) -> Result<(), DeleteError> {
-    let word = Word::new(word.to_string(), lang.clone())?;
+    let word = Word::new(word, lang)?;
 
     let tr_to_be_deleted = repository.read_by_word(&word).await?;
 

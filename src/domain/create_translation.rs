@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use thiserror::Error;
 
 use crate::domain::ports::{RepoCreateError, RepoReadError, TranslationRepository};
@@ -15,23 +16,17 @@ pub enum CreateError {
     Duplicate,
 }
 
-pub async fn create_translation(
+pub async fn create_translation<S>(
     repository: &impl TranslationRepository,
     word: &str,
     word_lang: &Lang,
-    translations: &Vec<&str>,
+    translations: &[S],
     translation_lang: &Lang,
-) -> Result<TranslationRecord, CreateError> {
-    let tr = TranslationRecord::new(
-        None,
-        word.to_string(),
-        word_lang.clone(),
-        translations
-            .iter()
-            .map(|t| t.to_string())
-            .collect::<Vec<String>>(),
-        translation_lang.clone(),
-    )?;
+) -> Result<TranslationRecord, CreateError>
+where
+    S: Deref<Target = str>,
+{
+    let tr = TranslationRecord::new(None, word, word_lang, translations, translation_lang)?;
 
     let word = tr.word();
 

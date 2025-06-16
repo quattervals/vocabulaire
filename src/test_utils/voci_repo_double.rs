@@ -48,11 +48,11 @@ pub mod repo_double {
             let (_id, word, lang, translations, translation_lang) = tr.flat();
 
             let s = TranslationRecord::new(
-                Some(TRANSLATION_ID.to_string()),
-                word.clone(),
-                lang.clone(),
-                translations.clone(),
-                translation_lang.clone(),
+                Some(TRANSLATION_ID),
+                word,
+                lang,
+                translations,
+                translation_lang,
             )
             .unwrap();
 

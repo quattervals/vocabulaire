@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use thiserror::Error;
 
 use crate::domain::ports::{RepoReadError, RepoUpdateError, TranslationRepository};
@@ -27,14 +28,17 @@ pub enum UpdateError {
 /// Returns `UpdateError::WordError` if:
 /// * The word is empty or invalid
 /// * The language specification is invalid
-pub async fn update_translation(
+pub async fn update_translation<S>(
     repository: &impl TranslationRepository,
     word: &str,
     lang: &Lang,
-    extra_translations: &Vec<&str>,
+    extra_translations: &[S],
     extra_translation_lang: &Lang,
-) -> Result<TranslationRecord, UpdateError> {
-    let word = Word::new(word.to_string(), lang.clone())?;
+) -> Result<TranslationRecord, UpdateError>
+where
+    S: Deref<Target = str>,
+{
+    let word = Word::new(word, lang)?;
 
     let mut tr_to_be_updated = repository.read_by_word(&word).await?;
 
@@ -58,8 +62,15 @@ mod tests {
     async fn update_existing_record_with_no_extra_word() {
         let repo = VociRepoDouble::new(&get_testing_persistence_config()).unwrap();
 
-        let updated_tr =
-            update_translation(&repo, WORD, &WORD_LANG, &[].to_vec(), &TRANSLATION_LANG).await;
+        let empty_translations: [&str; 0] = [];
+        let updated_tr = update_translation(
+            &repo,
+            WORD,
+            &WORD_LANG,
+            &empty_translations,
+            &TRANSLATION_LANG,
+        )
+        .await;
 
         let updated_translation = updated_tr.unwrap();
         let (_, _, _, actual_translations, _) = updated_translation.flat();
@@ -80,7 +91,7 @@ mod tests {
             &repo,
             WORD,
             &WORD_LANG,
-            &ADDITONAL_TRANSLATIONS.to_vec(),
+            &ADDITONAL_TRANSLATIONS,
             &TRANSLATION_LANG,
         )
         .await;

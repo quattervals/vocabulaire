@@ -67,7 +67,7 @@ pub async fn create_translation<T: TranslationRepository>(
         repository.get_ref(),
         &request.word,
         &request.lang,
-        &request.translations.iter().map(|s| s.as_str()).collect(),
+        &request.translations,
         &request.translation_lang,
     )
     .await;
@@ -121,7 +121,7 @@ pub async fn update_translation<T: TranslationRepository>(
         repository.get_ref(),
         &request.word,
         &request.lang,
-        &request.translations.iter().map(|s| s.as_str()).collect(),
+        &request.translations,
         &request.translation_lang,
     )
     .await;
