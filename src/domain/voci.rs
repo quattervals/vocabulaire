@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::ops::Deref;
 use thiserror::Error;
 
 /// Represents available languages in the system
@@ -34,17 +35,18 @@ impl TranslationId {
     }
 }
 
-impl From<String> for TranslationId {
-    fn from(id: String) -> Self {
+impl From<&str> for TranslationId {
+    fn from(id: &str) -> Self {
         if id.is_empty() {
             Self(None)
         } else {
-            Self(Some(id))
+            Self(Some(id.to_string()))
         }
     }
 }
-impl From<Option<String>> for TranslationId {
-    fn from(opt: Option<String>) -> Self {
+
+impl From<Option<&str>> for TranslationId {
+    fn from(opt: Option<&str>) -> Self {
         match opt {
             Some(val) => {
                 if val.is_empty() {
@@ -65,11 +67,14 @@ pub struct Word {
 }
 
 impl Word {
-    pub fn new(word: String, lang: Lang) -> Result<Self, TranslationRecordError> {
+    pub fn new(word: &str, lang: &Lang) -> Result<Self, TranslationRecordError> {
         if word.is_empty() {
             return Err(TranslationRecordError::EmptyWord);
         }
-        Ok(Word { word, lang })
+        Ok(Word {
+            word: word.to_string(),
+            lang: lang.clone(),
+        })
     }
     pub fn value(&self) -> (&String, &Lang) {
         (&self.word, &self.lang)
@@ -83,7 +88,10 @@ struct Translations {
 }
 
 impl Translations {
-    fn new(words: Vec<String>, lang: Lang) -> Result<Self, TranslationRecordError> {
+    fn new<S>(words: &[S], lang: &Lang) -> Result<Self, TranslationRecordError>
+    where
+        S: Deref<Target = str>,
+    {
         if words.is_empty() {
             return Err(TranslationRecordError::EmptyTranslation);
         }
@@ -92,7 +100,10 @@ impl Translations {
             return Err(TranslationRecordError::EmptyWordInTranslation);
         }
 
-        Ok(Translations { words, lang })
+        Ok(Translations {
+            words: words.iter().map(|s| s.to_string()).collect(),
+            lang: lang.clone(),
+        })
     }
 
     fn translations(&self) -> &Vec<String> {
@@ -111,13 +122,16 @@ pub struct TranslationRecord {
 }
 
 impl TranslationRecord {
-    pub fn new(
-        id: Option<String>,
-        word: String,
-        word_lang: Lang,
-        translations: Vec<String>,
-        translation_lang: Lang,
-    ) -> Result<Self, TranslationRecordError> {
+    pub fn new<S>(
+        id: Option<&str>,
+        word: &str,
+        word_lang: &Lang,
+        translations: &[S],
+        translation_lang: &Lang,
+    ) -> Result<Self, TranslationRecordError>
+    where
+        S: Deref<Target = str>,
+    {
         let id = TranslationId::from(id);
         let word = Word::new(word, word_lang)?;
         let translations = Translations::new(translations, translation_lang)?;
@@ -194,22 +208,22 @@ mod tests {
 
     #[test]
     fn word_new_ok_input_constructed() {
-        let word = Word::new("chien".to_string(), Lang::fr);
+        let word = Word::new("chien", &Lang::fr);
         assert_eq!((word.unwrap().value()), (&"chien".to_string(), &Lang::fr));
     }
 
     #[test]
     fn word_new_bad_input_error() {
-        let err_word = Word::new("".to_string(), Lang::fr);
+        let err_word = Word::new("", &Lang::fr);
         assert!(err_word.is_err());
         assert_eq!(err_word.unwrap_err(), TranslationRecordError::EmptyWord);
     }
 
     #[test]
     fn translation_new_ok_input_constructed() {
-        let words = vec!["hund".to_string(), "köter".to_string()];
+        let words = vec!["hund", "köter"];
 
-        let translations = Translations::new(words.clone(), Lang::de);
+        let translations = Translations::new(&words, &Lang::de);
         for (i, translation) in translations.unwrap().translations().iter().enumerate() {
             assert_eq!(*translation, words[i]);
         }
@@ -217,9 +231,9 @@ mod tests {
 
     #[test]
     fn translation_new_empty_word_err() {
-        let err_words = vec!["".to_string(), "köter".to_string()];
+        let err_words = &["", "köter"];
 
-        let err_translations = Translations::new(err_words.clone(), Lang::de);
+        let err_translations = Translations::new(err_words, &Lang::de);
         assert!(err_translations.is_err());
         assert_eq!(
             err_translations.unwrap_err(),
@@ -229,9 +243,8 @@ mod tests {
 
     #[test]
     fn translation_new_empty_string_err() {
-        let err_words = vec![];
-
-        let err_translations = Translations::new(err_words.clone(), Lang::de);
+        let err_words: [&str; 0] = [];
+        let err_translations = Translations::new(&err_words, &Lang::de);
         assert!(err_translations.is_err());
         assert_eq!(
             err_translations.unwrap_err(),
@@ -241,24 +254,18 @@ mod tests {
 
     #[test]
     fn translation_record_new_ok_input_constructed() {
-        let id = Some("1234".to_string());
+        let id = "1234";
 
-        let word = "chien".to_string();
+        let word = "chien";
         let word_lang = Lang::fr;
-
-        let translations = vec!["hund".to_string(), "köter".to_string()];
+        let translations = vec!["hund", "köter"];
         let translation_lang = Lang::de;
 
-        let chien = TranslationRecord::new(
-            id.clone(),
-            word,
-            word_lang,
-            translations.clone(),
-            translation_lang,
-        )
-        .unwrap();
+        let chien =
+            TranslationRecord::new(Some(id), word, &word_lang, &translations, &translation_lang)
+                .unwrap();
 
-        assert_eq!(*chien.id.value(), id);
+        assert_eq!(*chien.id.value(), Some(id.to_string()));
         assert_eq!(chien.word.word, "chien");
         assert_eq!(chien.word.lang, Lang::fr);
         assert_eq!(chien.translations.lang, Lang::de);
@@ -269,19 +276,14 @@ mod tests {
 
     #[test]
     fn translation_record_new_bad_input_err() {
-        let word = "chien".to_string();
+        let word = "chien";
         let word_lang = Lang::fr;
 
-        let translations = vec!["hund".to_string(), "".to_string()];
+        let translations = vec!["hund", ""];
         let translation_lang = Lang::de;
 
-        let chien = TranslationRecord::new(
-            None,
-            word,
-            word_lang,
-            translations.clone(),
-            translation_lang,
-        );
+        let chien =
+            TranslationRecord::new(None, word, &word_lang, &translations, &translation_lang);
 
         assert!(chien.is_err());
         assert_eq!(

@@ -18,21 +18,13 @@ pub mod shared {
     pub const ADDITONAL_TRANSLATIONS: [&str; 2] = ["Schäfer", "Jagdhund"];
     pub const TRANSLATION_LANG: Lang = Lang::de;
 
-    pub fn stub_translations() -> Vec<String> {
-        TRANSLATIONS.iter().map(|i| i.to_string()).collect()
-    }
-
     pub fn stub_translation_record(with_id: bool) -> TranslationRecord {
         TranslationRecord::new(
-            if with_id {
-                Some(TRANSLATION_ID.to_string())
-            } else {
-                None
-            },
-            WORD.to_string(),
-            WORD_LANG,
-            stub_translations(),
-            TRANSLATION_LANG,
+            if with_id { Some(TRANSLATION_ID) } else { None },
+            WORD,
+            &WORD_LANG,
+            &TRANSLATIONS,
+            &TRANSLATION_LANG,
         )
         .unwrap()
     }

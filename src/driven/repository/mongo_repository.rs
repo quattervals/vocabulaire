@@ -1,10 +1,9 @@
-use std::str::FromStr;
-
 use async_trait::async_trait;
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use mongodb::{Client, Collection, bson};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 use crate::config::PersistenceConfig;
 use crate::domain::ports::{
@@ -31,8 +30,8 @@ pub struct VociMongo {
     translation_lang: Lang,
 }
 
-impl From<TranslationRecord> for VociMongo {
-    fn from(tr: TranslationRecord) -> Self {
+impl From<&TranslationRecord> for VociMongo {
+    fn from(tr: &TranslationRecord) -> Self {
         let object_id = match tr.id().value() {
             Some(id) => ObjectId::parse_str(id).unwrap(),
             None => ObjectId::new(),
@@ -54,11 +53,11 @@ impl TryInto<TranslationRecord> for VociMongo {
     type Error = TranslationRecordError;
     fn try_into(self) -> Result<TranslationRecord, Self::Error> {
         TranslationRecord::new(
-            Some(self._id.to_string()),
-            self.word,
-            self.lang,
-            self.translations,
-            self.translation_lang,
+            Some(&self._id.to_string()),
+            &self.word,
+            &self.lang,
+            &self.translations,
+            &self.translation_lang,
         )
     }
 }
@@ -102,7 +101,7 @@ impl TranslationRepository for VociMongoRepository {
     }
 
     async fn create(&self, tr: &TranslationRecord) -> Result<TranslationRecord, RepoCreateError> {
-        let voci_mongo = VociMongo::from(tr.clone());
+        let voci_mongo = VociMongo::from(tr);
         let translation_collection = self.get_collection().await;
 
         let result = translation_collection.insert_one(voci_mongo).await;
@@ -115,11 +114,11 @@ impl TranslationRepository for VociMongoRepository {
         let (_, word, lang, translations, translation_lang) = tr.flat();
 
         let created_tr = TranslationRecord::new(
-            Some(inserted_id.to_string()),
-            word.clone(),
-            lang.clone(),
-            translations.clone(),
-            translation_lang.clone(),
+            Some(&inserted_id.to_string()),
+            word,
+            lang,
+            translations,
+            translation_lang,
         )
         .unwrap();
         Ok(created_tr)
@@ -289,7 +288,7 @@ mod tests {
         let tr = stub_translation_record(false);
         let _ = repo.create(&tr).await.unwrap();
 
-        let non_existing_word = Word::new("nix".to_string(), Lang::de).unwrap();
+        let non_existing_word = Word::new("nix", &Lang::de).unwrap();
         let result = repo.read_by_word(&non_existing_word).await;
 
         assert!(result.is_err());
@@ -344,7 +343,7 @@ mod tests {
         let tr = &stub_translation_record(false);
         let _ = repo.create(tr).await.unwrap();
 
-        let delete_id = TranslationId::from("6817c21bf99716ff3f9968eb".to_string());
+        let delete_id = TranslationId::from("6817c21bf99716ff3f9968eb");
 
         assert_eq!(
             repo.delete(&delete_id).await.unwrap_err(),
@@ -359,29 +358,11 @@ mod tests {
         let tr = &stub_translation_record(false);
         let _ = repo.create(tr).await.unwrap();
 
-        let delete_id = TranslationId::from("".to_string());
+        let delete_id = TranslationId::from("");
 
         assert_eq!(
             repo.delete(&delete_id).await.unwrap_err(),
             RepoDeleteError::BadId
         );
     }
-
-    // async fn setup_repo() -> VociMongoRepository {
-    //     let config = get_testing_persistence_config();
-    //     let repo: VociMongoRepository = Repository::<TranslationRecord>::new(&config).unwrap();
-
-    //     delete_collection(config, &repo).await;
-
-    //     repo
-    // }
-
-    // async fn delete_collection(config: PersistenceConfig, repo: &VociMongoRepository) {
-    //     let collection = repo.get_collection().await;
-    //     let coll: Collection<VociMongoRepository> = collection
-    //         .client()
-    //         .database(&config.database)
-    //         .collection(&config.schema_collection);
-    //     coll.delete_many(doc! {}).await.unwrap();
-    // }
 }

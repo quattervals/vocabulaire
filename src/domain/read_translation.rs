@@ -18,7 +18,7 @@ pub async fn read_translation(
     word: &str,
     lang: &Lang,
 ) -> Result<TranslationRecord, ReadError> {
-    let word = Word::new(word.to_string(), lang.clone())?;
+    let word = Word::new(word, lang)?;
 
     let result = repository.read_by_word(&word).await;
 
