@@ -26,3 +26,108 @@ Stop:
 `docker compose -f docker/docker-compose.yml down`
 or
 `docker container stop mongo_container && docker rm mongo_container`
+
+
+## System Overview
+
+The top level architecture is intended to be clean as in onion shaped. The concrete implementation is "ports and adapters"
+
+### Domain
+
+The "domain" defines domain entities and use cases. The use cases are not actually behind and interface but provide just API-functions. These are the "driving" ports
+The domain defines a port for the `TranslationRepository` to persist data. This is the "driven" port.
+
+
+### External Components
+
+The Rest API uses the driving port.
+
+The Mongo Repository adapter implements the `TranslationRepository` port.
+
+
+
+
+```plantuml
+@startuml
+
+() UseCases as iuc
+() TranslationRepository as itr
+
+component RestApi
+RestApi .> iuc : use
+
+component Domain {
+    component "Use Cases" as uc
+    iuc<|. uc
+
+    component "Vocabulaire" as v
+    uc ..> v : use
+    v .> itr: use
+}
+
+[Mongo Repository] as mr
+itr <|. mr
+
+database     mongoDb
+mr --> mongoDb
+
+@enduml
+```
+
+This Variant of the component diagram shows how the components are connected. Note that "Domain" is just a frame around some components
+
+```plantuml
+@startuml
+
+() UseCases as iuc
+() TranslationRepository as itr
+
+component RestApi
+RestApi -( iuc
+
+frame Domain {
+    component "Use Cases" as uc
+    uc -() iuc
+
+    component "Vocabulaire" as v
+    uc ..> v : use
+    v .( itr
+}
+
+[Mongo Repository] as mr
+itr - mr
+
+database  mongoDb
+mr ..> mongoDb : use
+
+@enduml
+```
+
+
+This diagram only shows top level components and their ports. This is the closest approximation to a full composite structure diagram
+
+```plantuml
+@startuml
+component RestApi
+
+component Domain {
+  portin "Use Cases" as uc
+  portout "TranslationRepository" as tr
+  component UseCase
+  component Vocabulaire
+
+  uc ..> UseCase
+  UseCase .> Vocabulaire
+  Vocabulaire ..> tr
+}
+
+RestApi ..>  uc
+
+[Mongo Repository] as mr
+tr ..> mr
+
+database  mongoDb
+mr ..> mongoDb : use
+
+@enduml
+```
